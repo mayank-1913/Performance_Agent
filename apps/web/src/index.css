@@ -1,0 +1,399 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* =========================================================================
+   LIGHT THEME — clean, modern, professional
+   Reference: seller-details style light dashboard
+     - white / very-light-gray page background
+     - white cards with soft shadow + rounded corners
+     - indigo primary + soft pastel status colors
+     - light sidebar with subtle indigo active state
+   ========================================================================= */
+
+:root {
+  /* Semantic surface tokens (also mirrored in tailwind.config.js). */
+  --bg-primary: #f8fafc;   /* page background */
+  --bg-secondary: #f3f4f6; /* subtle surface */
+  --bg-card: #ffffff;      /* cards / panels */
+  --border-soft: #e5e7eb;
+  --border-softer: #eef2f6;
+
+  --text-primary: #111827;   /* body text (near black) */
+  --text-secondary: #4b5563; /* secondary body */
+  --text-muted: #6b7280;     /* muted / labels */
+  --text-subtle: #9ca3af;    /* placeholders */
+
+  --brand-500: #6366f1;      /* indigo primary */
+  --brand-600: #4f46e5;
+  --brand-50:  #eef2ff;
+  --brand-100: #e0e7ff;
+  --accent-blue: #3b82f6;
+
+  --success-500: #10b981;
+  --warning-500: #f59e0b;
+  --danger-500:  #ef4444;
+
+  --accent-gradient: linear-gradient(135deg, #6366f1 0%, #3b82f6 100%);
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  html {
+    color-scheme: light;
+  }
+  body {
+    @apply font-sans antialiased;
+    color: var(--text-primary);
+    background-color: var(--bg-primary);
+    /* Very subtle radial highlight so the page doesn't look flat.
+       Kept intentionally faint — well below the reference image's noise
+       floor so cards read as the primary surface. */
+    background-image:
+      radial-gradient(
+        circle at 10% -10%,
+        rgba(99, 102, 241, 0.06) 0%,
+        transparent 45%
+      ),
+      radial-gradient(
+        circle at 100% 0%,
+        rgba(59, 130, 246, 0.05) 0%,
+        transparent 40%
+      );
+    background-attachment: fixed;
+    overflow-x: hidden;
+    letter-spacing: -0.005em;
+  }
+
+  ::selection {
+    background: rgba(99, 102, 241, 0.18);
+    color: var(--text-primary);
+  }
+
+  .force-wrap {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  /* Light-theme scrollbars — barely visible until hover. */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(15, 23, 42, 0.10);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(15, 23, 42, 0.22);
+    background-clip: padding-box;
+    border: 2px solid transparent;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Manrope', 'Inter', ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: -0.018em;
+    color: var(--text-primary);
+  }
+}
+
+@layer utilities {
+  /* Legacy background helpers — kept as-is for compatibility so existing
+     bg-app / bg-app-secondary / text-soft / text-muted / border-soft
+     class usages still resolve, now to light-theme values. */
+  .bg-app {
+    background-color: var(--bg-primary);
+  }
+  .bg-app-secondary {
+    background-color: var(--bg-secondary);
+  }
+  .text-soft {
+    color: var(--text-secondary);
+  }
+  .text-muted {
+    color: var(--text-muted);
+  }
+  .border-soft {
+    border-color: var(--border-soft);
+  }
+  .accent-text {
+    background: var(--accent-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .accent-bg {
+    background: var(--accent-gradient);
+  }
+  .accent-divider {
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(99, 102, 241, 0.30) 25%,
+      rgba(59, 130, 246, 0.30) 75%,
+      transparent 100%
+    );
+  }
+}
+
+@layer components {
+  /* =================== Buttons =================== */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium
+           transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40
+           focus-visible:ring-offset-2 focus-visible:ring-offset-white
+           disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  /* Primary CTA — solid indigo, subtle shadow, gentle lift on hover. */
+  .btn-primary {
+    @apply btn text-white;
+    background-color: var(--brand-500);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(99, 102, 241, 0.30);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background-color: var(--brand-600);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px -2px rgba(99, 102, 241, 0.35);
+  }
+  .btn-primary:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  }
+
+  .btn-secondary {
+    @apply btn;
+    background-color: #ffffff;
+    color: var(--text-primary);
+    border: 1px solid var(--border-soft);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    background-color: #f9fafb;
+    border-color: #d1d5db;
+  }
+
+  .btn-ghost {
+    @apply btn border border-transparent bg-transparent;
+    color: var(--text-secondary);
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background-color: #f3f4f6;
+    color: var(--text-primary);
+  }
+
+  /* =================== Cards =================== */
+  .card {
+    @apply rounded-2xl p-5 transition-colors;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06);
+    color: var(--text-primary);
+    min-width: 0;
+  }
+  .card-tight { @apply card p-4; }
+  .card-loud  { @apply card p-6; }
+  .card-hover { @apply transition-all duration-200; }
+  .card-hover:hover {
+    border-color: #d1d5db;
+    box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.08), 0 2px 4px -1px rgba(15, 23, 42, 0.05);
+    transform: translateY(-1px);
+  }
+
+  /* =================== Forms =================== */
+  .label {
+    @apply mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.08em];
+    color: var(--text-muted);
+  }
+  .input {
+    @apply w-full rounded-lg px-3.5 py-2.5 text-sm transition-all duration-150;
+    background-color: #ffffff;
+    border: 1px solid var(--border-soft);
+    color: var(--text-primary);
+    color-scheme: light;
+  }
+  .input::placeholder {
+    color: var(--text-subtle);
+  }
+  .input:hover {
+    border-color: #d1d5db;
+  }
+  .input:focus {
+    outline: none;
+    border-color: var(--brand-500);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  }
+  /* Native select caret — dark chevron on light background. */
+  select.input {
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%236b7280'%3e%3cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.06l3.71-3.83a.75.75 0 111.08 1.04l-4.25 4.39a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.65rem center;
+    background-size: 1.1rem;
+    padding-right: 2.25rem;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  /* =================== Chips =================== */
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium;
+    background-color: #f3f4f6;
+    border: 1px solid var(--border-soft);
+    color: var(--text-secondary);
+  }
+
+  /* =================== Layout primitives =================== */
+  .page-container {
+    @apply mx-auto w-full max-w-7xl px-5 py-7 md:px-10 md:py-9;
+    min-width: 0;
+  }
+  .page-stack {
+    @apply space-y-7;
+    min-width: 0;
+  }
+  .page-hero {
+    @apply flex flex-wrap items-end justify-between gap-4;
+  }
+  .page-hero-title {
+    @apply font-display text-2xl font-semibold tracking-tight;
+    color: var(--text-primary);
+  }
+  .page-hero-subtitle {
+    @apply mt-1 max-w-2xl text-sm;
+    color: var(--text-muted);
+  }
+
+  /* =================== Tables =================== */
+  .table-wrap {
+    @apply overflow-x-auto rounded-2xl;
+    background-color: #ffffff;
+    border: 1px solid var(--border-soft);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    max-width: 100%;
+  }
+  .table-wrap table {
+    @apply w-full text-left text-sm;
+    color: var(--text-primary);
+  }
+  .table-wrap thead {
+    @apply sticky top-0 z-10;
+    background-color: #f9fafb;
+    color: var(--text-muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .table-wrap thead th {
+    @apply font-semibold;
+  }
+  .table-wrap tbody tr:hover {
+    background-color: #f9fafb;
+  }
+  .table-wrap tbody.divide-y > tr {
+    border-top: 1px solid var(--border-softer);
+  }
+
+  /* =================== Code / log blocks =================== */
+  .code-block {
+    @apply rounded-xl p-3 text-xs leading-relaxed;
+    background-color: #f9fafb;
+    border: 1px solid var(--border-soft);
+    color: #1f2937;
+    max-width: 100%;
+    min-width: 0;
+  }
+  .code-block-scroll-y {
+    @apply code-block overflow-y-auto overflow-x-hidden;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .code-block-scroll-x {
+    @apply code-block overflow-auto;
+  }
+
+  .panel-toolbar {
+    @apply sticky top-0 z-10 flex items-center justify-between gap-2 px-3 py-2;
+    background-color: #ffffff;
+    border-bottom: 1px solid var(--border-soft);
+  }
+
+  /* =================== Step ribbon =================== */
+  .step-ribbon {
+    @apply flex flex-wrap items-center gap-2 text-xs;
+    color: var(--text-muted);
+  }
+  .step-ribbon .step {
+    @apply inline-flex items-center gap-2 rounded-full px-3 py-1.5;
+    background-color: #ffffff;
+    border: 1px solid var(--border-soft);
+    color: var(--text-secondary);
+  }
+  .step-ribbon .step-num {
+    @apply inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold;
+    background-color: #f3f4f6;
+    color: var(--text-muted);
+  }
+  .step-ribbon .step-active {
+    color: var(--brand-600);
+    border-color: rgba(99, 102, 241, 0.45);
+    background-color: var(--brand-50);
+    box-shadow: 0 1px 2px rgba(99, 102, 241, 0.10);
+  }
+  .step-ribbon .step-active .step-num {
+    background-color: var(--brand-500);
+    color: #ffffff;
+  }
+  .step-ribbon .step-sep {
+    color: #cbd5e1;
+  }
+
+  /* =================== Sidebar =================== */
+  .sidebar-shell {
+    background-color: #ffffff;
+    border-right: 1px solid var(--border-soft);
+  }
+  .sidebar-link {
+    @apply relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150;
+    color: var(--text-secondary);
+  }
+  .sidebar-link:hover {
+    color: var(--text-primary);
+    background-color: #f3f4f6;
+  }
+  .sidebar-link-active {
+    color: var(--brand-600);
+    background-color: var(--brand-50);
+    border: 1px solid rgba(99, 102, 241, 0.18);
+  }
+  .sidebar-link-active::before {
+    content: '';
+    position: absolute;
+    left: -1px;
+    top: 14%;
+    bottom: 14%;
+    width: 3px;
+    border-radius: 4px;
+    background-color: var(--brand-500);
+  }
+
+  /* =================== Status dot =================== */
+  .status-dot {
+    @apply inline-block h-1.5 w-1.5 rounded-full;
+  }
+
+  /* =================== Topbar =================== */
+  .topbar {
+    background-color: #ffffff;
+    border-bottom: 1px solid var(--border-soft);
+  }
+}

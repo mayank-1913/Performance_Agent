@@ -1,0 +1,773 @@
+{
+    "metrics": {
+        "http_req_duration{expected_response:true}": {
+            "max": 116.7038,
+            "p(90)": 38.6492,
+            "p(95)": 42.869089999999986,
+            "avg": 34.180868518518494,
+            "min": 29.0656,
+            "med": 32.63185
+        },
+        "checks": {
+            "passes": 539,
+            "fails": 0,
+            "value": 1
+        },
+        "group_duration": {
+            "max": 1144.1541,
+            "p(90)": 1040.57744,
+            "p(95)": 1045.101205,
+            "avg": 1035.8525107806697,
+            "min": 1029.2483,
+            "med": 1033.5751500000001
+        },
+        "http_req_duration": {
+            "p(90)": 38.6492,
+            "p(95)": 42.869089999999986,
+            "avg": 34.180868518518494,
+            "min": 29.0656,
+            "med": 32.63185,
+            "max": 116.7038,
+            "thresholds": {
+                "p(95)<2000": false
+            }
+        },
+        "http_req_blocked": {
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 1.491338888888889,
+            "min": 0,
+            "med": 0,
+            "max": 395.4343
+        },
+        "data_sent": {
+            "count": 163133,
+            "rate": 1177.9323160580757
+        },
+        "vus_max": {
+            "max": 5,
+            "value": 5,
+            "min": 5
+        },
+        "http_req_sending": {
+            "min": 0,
+            "med": 0.3881,
+            "max": 4.7603,
+            "p(90)": 0.7583,
+            "p(95)": 0.8725049999999996,
+            "avg": 0.3936692592592591
+        },
+        "http_req_connecting": {
+            "max": 42.158,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0.35875685185185185,
+            "min": 0,
+            "med": 0
+        },
+        "http_req_tls_handshaking": {
+            "max": 176.1153,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0.7852175925925926,
+            "min": 0,
+            "med": 0
+        },
+        "http_req_waiting": {
+            "p(90)": 35.45777,
+            "p(95)": 40.845594999999996,
+            "avg": 31.913006296296306,
+            "min": 26.9781,
+            "med": 30.26545,
+            "max": 114.8512
+        },
+        "http_req_receiving": {
+            "min": 0,
+            "med": 1.6869,
+            "max": 8.9941,
+            "p(90)": 3.2773100000000004,
+            "p(95)": 4.065614999999997,
+            "avg": 1.8741929629629643
+        },
+        "iterations": {
+            "count": 12,
+            "rate": 0.08664824280002763
+        },
+        "http_reqs": {
+            "count": 540,
+            "rate": 3.8991709260012435
+        },
+        "iteration_duration": {
+            "p(95)": 43605.815200000005,
+            "avg": 43510.159725,
+            "min": 43417.5426,
+            "med": 43525.5144,
+            "max": 43612.5373,
+            "p(90)": 43596.52349
+        },
+        "vus": {
+            "value": 2,
+            "min": 1,
+            "max": 5
+        },
+        "data_received": {
+            "count": 2548125,
+            "rate": 18399.21280706837
+        },
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 540,
+            "thresholds": {
+                "rate<0.05": false
+            },
+            "value": 0
+        }
+    },
+    "setup_data": {
+        "ACCESS_TOKEN": "",
+        "AUTH_TOKEN": "",
+        "ID_TOKEN": "",
+        "JWT": "",
+        "SESSION_ID": "",
+        "cookies": [],
+        "vars": {}
+    },
+    "root_group": {
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {
+            "Logout": {
+                "path": "::Logout",
+                "id": "2958cd095d596e760ce0636ac19c8a6a",
+                "groups": {},
+                "checks": {
+                        "Logout - status is 2xx": {
+                            "name": "Logout - status is 2xx",
+                            "path": "::Logout::Logout - status is 2xx",
+                            "id": "a77c0a45459f32de7caeb9290466ce05",
+                            "passes": 13,
+                            "fails": 0
+                        }
+                    },
+                "name": "Logout"
+            },
+            "User activity logs": {
+                "path": "::User activity logs",
+                "id": "ffa888f5b5e31cf0b808a3058f4f878d",
+                "groups": {},
+                "checks": {
+                        "User activity logs - status is 2xx": {
+                            "fails": 0,
+                            "name": "User activity logs - status is 2xx",
+                            "path": "::User activity logs::User activity logs - status is 2xx",
+                            "id": "17638a617dbf8e1899509bdc2ea2e4a4",
+                            "passes": 13
+                        }
+                    },
+                "name": "User activity logs"
+            },
+            "Get user types list": {
+                "name": "Get user types list",
+                "path": "::Get user types list",
+                "id": "39bf46aadc2ded9bc5bb6da00365a756",
+                "groups": {},
+                "checks": {
+                        "Get user types list - status is 2xx": {
+                            "path": "::Get user types list::Get user types list - status is 2xx",
+                            "id": "33e5cbf2a3ec81125bd928210d331877",
+                            "passes": 13,
+                            "fails": 0,
+                            "name": "Get user types list - status is 2xx"
+                        }
+                    }
+            },
+            "Get billing model list": {
+                "name": "Get billing model list",
+                "path": "::Get billing model list",
+                "id": "bf3bf6aa399af02cb04953d354a0ad47",
+                "groups": {},
+                "checks": {
+                        "Get billing model list - status is 2xx": {
+                            "fails": 0,
+                            "name": "Get billing model list - status is 2xx",
+                            "path": "::Get billing model list::Get billing model list - status is 2xx",
+                            "id": "f5e718452441a13b207f66cb03cf3b34",
+                            "passes": 13
+                        }
+                    }
+            },
+            "Get payout event list": {
+                "name": "Get payout event list",
+                "path": "::Get payout event list",
+                "id": "60d3cebc9f40f634b3c9dbf03b60ff03",
+                "groups": {},
+                "checks": {
+                        "Get payout event list - status is 2xx": {
+                            "name": "Get payout event list - status is 2xx",
+                            "path": "::Get payout event list::Get payout event list - status is 2xx",
+                            "id": "a7dbf42320f27f515e121080e202e9ac",
+                            "passes": 13,
+                            "fails": 0
+                        }
+                    }
+            },
+            "Get country list": {
+                "name": "Get country list",
+                "path": "::Get country list",
+                "id": "3af96049b814362f91d3343b4a2ec60f",
+                "groups": {},
+                "checks": {
+                        "Get country list - status is 2xx": {
+                            "name": "Get country list - status is 2xx",
+                            "path": "::Get country list::Get country list - status is 2xx",
+                            "id": "095523f0ceaeb7b27c00cb88bf2bc165",
+                            "passes": 13,
+                            "fails": 0
+                        }
+                    }
+            },
+            "Get region list": {
+                "groups": {},
+                "checks": {
+                        "Get region list - status is 2xx": {
+                            "passes": 13,
+                            "fails": 0,
+                            "name": "Get region list - status is 2xx",
+                            "path": "::Get region list::Get region list - status is 2xx",
+                            "id": "577fb96830fdc2978b46ff96b6b4f3f4"
+                        }
+                    },
+                "name": "Get region list",
+                "path": "::Get region list",
+                "id": "808fbbf1203c5ba49285c3a2c2932424"
+            },
+            "User list": {
+                "id": "138915a01f8f8e89c2490ccf1c21fca6",
+                "groups": {},
+                "checks": {
+                        "User list - status is 2xx": {
+                            "name": "User list - status is 2xx",
+                            "path": "::User list::User list - status is 2xx",
+                            "id": "98df38008c2c0f33a46cb14333ab6460",
+                            "passes": 13,
+                            "fails": 0
+                        }
+                    },
+                "name": "User list",
+                "path": "::User list"
+            },
+            "Advertiser list": {
+                "name": "Advertiser list",
+                "path": "::Advertiser list",
+                "id": "1d86c90b998de411b29ef8794e437be8",
+                "groups": {},
+                "checks": {
+                        "Advertiser list - status is 2xx": {
+                            "name": "Advertiser list - status is 2xx",
+                            "path": "::Advertiser list::Advertiser list - status is 2xx",
+                            "id": "fa7b1fc539efeda5bd32af184a832c73",
+                            "passes": 13,
+                            "fails": 0
+                        }
+                    }
+            },
+            "Get login advertiser list": {
+                "checks": {
+                    "Get login advertiser list - status is 2xx": {
+                        "name": "Get login advertiser list - status is 2xx",
+                        "path": "::Get login advertiser list::Get login advertiser list - status is 2xx",
+                        "id": "fb1f1aa1827421383e08a9735cc8e616",
+                        "passes": 13,
+                        "fails": 0
+                    }
+                },
+                "name": "Get login advertiser list",
+                "path": "::Get login advertiser list",
+                "id": "21bc88fd4023d46f189b71ef58ebc4f4",
+                "groups": {}
+            },
+            "Get roles": {
+                "name": "Get roles",
+                "path": "::Get roles",
+                "id": "aca4a83fbebcddb16648fe48569ff868",
+                "groups": {},
+                "checks": {
+                        "Get roles - status is 2xx": {
+                            "name": "Get roles - status is 2xx",
+                            "path": "::Get roles::Get roles - status is 2xx",
+                            "id": "32cc860c2167aaca97f36af0749f4aed",
+                            "passes": 13,
+                            "fails": 0
+                        }
+                    }
+            },
+            "Get edit advertiser form data": {
+                "name": "Get edit advertiser form data",
+                "path": "::Get edit advertiser form data",
+                "id": "085c24917a281f84cf6bbe362048bc3a",
+                "groups": {},
+                "checks": {
+                        "Get edit advertiser form data - status is 2xx": {
+                            "id": "088537fa41c4a798b917712b1854226f",
+                            "passes": 13,
+                            "fails": 0,
+                            "name": "Get edit advertiser form data - status is 2xx",
+                            "path": "::Get edit advertiser form data::Get edit advertiser form data - status is 2xx"
+                        }
+                    }
+            },
+            "Add advertiser": {
+                "name": "Add advertiser",
+                "path": "::Add advertiser",
+                "id": "87a736e0100f02228be065ef4d62a267",
+                "groups": {},
+                "checks": {
+                        "Add advertiser - status is 2xx": {
+                            "id": "bdc0f271938dc4eac5a8fbf9c9b284d2",
+                            "passes": 13,
+                            "fails": 0,
+                            "name": "Add advertiser - status is 2xx",
+                            "path": "::Add advertiser::Add advertiser - status is 2xx"
+                        }
+                    }
+            },
+            "Edit advertiser": {
+                "path": "::Edit advertiser",
+                "id": "ebbb5fb5ee9a8478d7c73adc0e5e25f3",
+                "groups": {},
+                "checks": {
+                        "Edit advertiser - status is 2xx": {
+                            "name": "Edit advertiser - status is 2xx",
+                            "path": "::Edit advertiser::Edit advertiser - status is 2xx",
+                            "id": "a1077963fafb2242f93cdd153db4dba5",
+                            "passes": 13,
+                            "fails": 0
+                        }
+                    },
+                "name": "Edit advertiser"
+            },
+            "Change advertiser status": {
+                "name": "Change advertiser status",
+                "path": "::Change advertiser status",
+                "id": "ee851bedf8c2e48716046877f6939d90",
+                "groups": {},
+                "checks": {
+                        "Change advertiser status - status is 2xx": {
+                            "path": "::Change advertiser status::Change advertiser status - status is 2xx",
+                            "id": "8d1d7c5680234363e6b11faf54af6703",
+                            "passes": 13,
+                            "fails": 0,
+                            "name": "Change advertiser status - status is 2xx"
+                        }
+                    }
+            },
+            "Add user": {
+                "name": "Add user",
+                "path": "::Add user",
+                "id": "cb5469481ea01455b0191988e6e354c7",
+                "groups": {},
+                "checks": {
+                        "Add user - status is 2xx": {
+                            "name": "Add user - status is 2xx",
+                            "path": "::Add user::Add user - status is 2xx",
+                            "id": "bf46ec16e51a7c83ec9a1a59c11af6b8",
+                            "passes": 13,
+                            "fails": 0
+                        }
+                    }
+            },
+            "User approval": {
+                "path": "::User approval",
+                "id": "b3661fde39f20dd2fc26cf82da243506",
+                "groups": {},
+                "checks": {
+                        "User approval - status is 2xx": {
+                            "name": "User approval - status is 2xx",
+                            "path": "::User approval::User approval - status is 2xx",
+                            "id": "b60b7a81afbe69ec2d4a42ca014bd698",
+                            "passes": 13,
+                            "fails": 0
+                        }
+                    },
+                "name": "User approval"
+            },
+            "Edit user": {
+                "name": "Edit user",
+                "path": "::Edit user",
+                "id": "a1186db9efd8185062a9fd1f5c86d629",
+                "groups": {},
+                "checks": {
+                        "Edit user - status is 2xx": {
+                            "id": "eb0ed532f14ec060f68c5cd639876ad8",
+                            "passes": 13,
+                            "fails": 0,
+                            "name": "Edit user - status is 2xx",
+                            "path": "::Edit user::Edit user - status is 2xx"
+                        }
+                    }
+            },
+            "Delete user": {
+                "name": "Delete user",
+                "path": "::Delete user",
+                "id": "9b6e347cc56da449cd3c71a2c402cee1",
+                "groups": {},
+                "checks": {
+                        "Delete user - status is 2xx": {
+                            "name": "Delete user - status is 2xx",
+                            "path": "::Delete user::Delete user - status is 2xx",
+                            "id": "ccb0d3d9c89fb6876bfc79e1f61a0c05",
+                            "passes": 13,
+                            "fails": 0
+                        }
+                    }
+            },
+            "Campaign Management": {
+                "groups": {},
+                "checks": {
+                        "Campaign Management - status is 2xx": {
+                            "id": "5c21ca0ad98fe6bd8a1fd1b4898d760e",
+                            "passes": 13,
+                            "fails": 0,
+                            "name": "Campaign Management - status is 2xx",
+                            "path": "::Campaign Management::Campaign Management - status is 2xx"
+                        }
+                    },
+                "name": "Campaign Management",
+                "path": "::Campaign Management",
+                "id": "90fa63b420d06aa681b2c39b1ef3c950"
+            },
+            "Internal Dashboard": {
+                "id": "4547715cb07b79ef4388eb3302ba3ee4",
+                "groups": {},
+                "checks": {
+                        "Internal Dashboard - status is 2xx": {
+                            "passes": 13,
+                            "fails": 0,
+                            "name": "Internal Dashboard - status is 2xx",
+                            "path": "::Internal Dashboard::Internal Dashboard - status is 2xx",
+                            "id": "f5ab5947be63f49ab4c5b45dce23df75"
+                        }
+                    },
+                "name": "Internal Dashboard",
+                "path": "::Internal Dashboard"
+            },
+            "Get device type list": {
+                "name": "Get device type list",
+                "path": "::Get device type list",
+                "id": "4f6fbd4afc336b8600558c6cb2a0cfac",
+                "groups": {},
+                "checks": {
+                        "Get device type list - status is 2xx": {
+                            "name": "Get device type list - status is 2xx",
+                            "path": "::Get device type list::Get device type list - status is 2xx",
+                            "id": "03a0358861c572ddb62c8689d1977b33",
+                            "passes": 13,
+                            "fails": 0
+                        }
+                    }
+            },
+            "Get audience list": {
+                "name": "Get audience list",
+                "path": "::Get audience list",
+                "id": "8ce32ecf50bd22692c475179e45e1bdc",
+                "groups": {},
+                "checks": {
+                        "Get audience list - status is 2xx": {
+                            "name": "Get audience list - status is 2xx",
+                            "path": "::Get audience list::Get audience list - status is 2xx",
+                            "id": "7c60455cb393af6739cb3c29d565a49f",
+                            "passes": 13,
+                            "fails": 0
+                        }
+                    }
+            },
+            "Add audience": {
+                "name": "Add audience",
+                "path": "::Add audience",
+                "id": "7c221dd3b9ae31905f051751665e4e63",
+                "groups": {},
+                "checks": {
+                        "Add audience - status is 2xx": {
+                            "id": "9c952e96b1219dde1a5aa96da03732e8",
+                            "passes": 13,
+                            "fails": 0,
+                            "name": "Add audience - status is 2xx",
+                            "path": "::Add audience::Add audience - status is 2xx"
+                        }
+                    }
+            },
+            "Edit audience": {
+                "name": "Edit audience",
+                "path": "::Edit audience",
+                "id": "ebf66386205479e03660f5b59ca7d7c5",
+                "groups": {},
+                "checks": {
+                        "Edit audience - status is 2xx": {
+                            "id": "ca33c66939b3c4cb63a3a50aa1266848",
+                            "passes": 13,
+                            "fails": 0,
+                            "name": "Edit audience - status is 2xx",
+                            "path": "::Edit audience::Edit audience - status is 2xx"
+                        }
+                    }
+            },
+            "Archive audience": {
+                "id": "eedcad40d82f210dace92ddf27143297",
+                "groups": {},
+                "checks": {
+                        "Archive audience - status is 2xx": {
+                            "path": "::Archive audience::Archive audience - status is 2xx",
+                            "id": "993bfc2c1887ba6f4ae0cc70b620d2fa",
+                            "passes": 13,
+                            "fails": 0,
+                            "name": "Archive audience - status is 2xx"
+                        }
+                    },
+                "name": "Archive audience",
+                "path": "::Archive audience"
+            },
+            "Get frequency list": {
+                "path": "::Get frequency list",
+                "id": "05a6ae70fec8f70dd879b3a949011ffa",
+                "groups": {},
+                "checks": {
+                        "Get frequency list - status is 2xx": {
+                            "name": "Get frequency list - status is 2xx",
+                            "path": "::Get frequency list::Get frequency list - status is 2xx",
+                            "id": "242fd777f712236dc773cb11e270d080",
+                            "passes": 13,
+                            "fails": 0
+                        }
+                    },
+                "name": "Get frequency list"
+            },
+            "Get time list": {
+                "name": "Get time list",
+                "path": "::Get time list",
+                "id": "b23240920b6b20139fd0b690a649cc39",
+                "groups": {},
+                "checks": {
+                        "Get time list - status is 2xx": {
+                            "path": "::Get time list::Get time list - status is 2xx",
+                            "id": "79299ee0b89432415281f65bd4f27fe6",
+                            "passes": 13,
+                            "fails": 0,
+                            "name": "Get time list - status is 2xx"
+                        }
+                    }
+            },
+            "Get source list": {
+                "id": "9bff6d54fddc3cc4d838412d28e08d1f",
+                "groups": {},
+                "checks": {
+                        "Get source list - status is 2xx": {
+                            "name": "Get source list - status is 2xx",
+                            "path": "::Get source list::Get source list - status is 2xx",
+                            "id": "adf93245b623cf44f2305d3702c6c224",
+                            "passes": 13,
+                            "fails": 0
+                        }
+                    },
+                "name": "Get source list",
+                "path": "::Get source list"
+            },
+            "Add feed source": {
+                "id": "910914ece2035522af554c2b0dd447a8",
+                "groups": {},
+                "checks": {
+                        "Add feed source - status is 2xx": {
+                            "name": "Add feed source - status is 2xx",
+                            "path": "::Add feed source::Add feed source - status is 2xx",
+                            "id": "ccffbfabb3395981cf3269392647b1aa",
+                            "passes": 13,
+                            "fails": 0
+                        }
+                    },
+                "name": "Add feed source",
+                "path": "::Add feed source"
+            },
+            "Edit feed source": {
+                "id": "a25429a1585453dc8a44df04f11a6851",
+                "groups": {},
+                "checks": {
+                        "Edit feed source - status is 2xx": {
+                            "name": "Edit feed source - status is 2xx",
+                            "path": "::Edit feed source::Edit feed source - status is 2xx",
+                            "id": "bbfd531d713318a01412e4172519b331",
+                            "passes": 13,
+                            "fails": 0
+                        }
+                    },
+                "name": "Edit feed source",
+                "path": "::Edit feed source"
+            },
+            "Combine source": {
+                "name": "Combine source",
+                "path": "::Combine source",
+                "id": "6539b34a018e2de5914be3b512154195",
+                "groups": {},
+                "checks": {
+                        "Combine source - status is 2xx": {
+                            "name": "Combine source - status is 2xx",
+                            "path": "::Combine source::Combine source - status is 2xx",
+                            "id": "80bd4ae25c257e04022b44c68e85a286",
+                            "passes": 13,
+                            "fails": 0
+                        }
+                    }
+            },
+            "Archive source": {
+                "name": "Archive source",
+                "path": "::Archive source",
+                "id": "b8301530f1fa65d3aa2b9609c0a05f00",
+                "groups": {},
+                "checks": {
+                        "Archive source - status is 2xx": {
+                            "passes": 13,
+                            "fails": 0,
+                            "name": "Archive source - status is 2xx",
+                            "path": "::Archive source::Archive source - status is 2xx",
+                            "id": "ed8443a629eab999dc539cdaf49ce72a"
+                        }
+                    }
+            },
+            "Restore source": {
+                "path": "::Restore source",
+                "id": "7cd720a1d98e18fa0ed380917cd54b5e",
+                "groups": {},
+                "checks": {
+                        "Restore source - status is 2xx": {
+                            "name": "Restore source - status is 2xx",
+                            "path": "::Restore source::Restore source - status is 2xx",
+                            "id": "e0e3f1850e65fa222d0d6ab65e21323e",
+                            "passes": 13,
+                            "fails": 0
+                        }
+                    },
+                "name": "Restore source"
+            },
+            "Refresh source": {
+                "id": "49b4a678a53083c89726fbef441cf4e8",
+                "groups": {},
+                "checks": {
+                        "Refresh source - status is 2xx": {
+                            "fails": 0,
+                            "name": "Refresh source - status is 2xx",
+                            "path": "::Refresh source::Refresh source - status is 2xx",
+                            "id": "f896f229153b8c120f6f3cf283ba8943",
+                            "passes": 13
+                        }
+                    },
+                "name": "Refresh source",
+                "path": "::Refresh source"
+            },
+            "Get source header": {
+                "name": "Get source header",
+                "path": "::Get source header",
+                "id": "121e500e3f9bfa8d8f081b0b740eef80",
+                "groups": {},
+                "checks": {
+                        "Get source header - status is 2xx": {
+                            "name": "Get source header - status is 2xx",
+                            "path": "::Get source header::Get source header - status is 2xx",
+                            "id": "44f34b1f1fc6fe89702c7e182faef953",
+                            "passes": 12,
+                            "fails": 0
+                        }
+                    }
+            },
+            "Get catalog list": {
+                "checks": {
+                    "Get catalog list - status is 2xx": {
+                        "path": "::Get catalog list::Get catalog list - status is 2xx",
+                        "id": "5bf44b69f9f812df7b22e882a268951e",
+                        "passes": 12,
+                        "fails": 0,
+                        "name": "Get catalog list - status is 2xx"
+                    }
+                },
+                "name": "Get catalog list",
+                "path": "::Get catalog list",
+                "id": "2fa8dcd4561901f33fe8f1c921df7f38",
+                "groups": {}
+            },
+            "Add catalog": {
+                "checks": {
+                    "Add catalog - status is 2xx": {
+                        "name": "Add catalog - status is 2xx",
+                        "path": "::Add catalog::Add catalog - status is 2xx",
+                        "id": "15aa3db867a99febef52a948f13141f9",
+                        "passes": 12,
+                        "fails": 0
+                    }
+                },
+                "name": "Add catalog",
+                "path": "::Add catalog",
+                "id": "d8c1e222c217711670fd2eb960b04732",
+                "groups": {}
+            },
+            "Edit catalog": {
+                "checks": {
+                    "Edit catalog - status is 2xx": {
+                        "name": "Edit catalog - status is 2xx",
+                        "path": "::Edit catalog::Edit catalog - status is 2xx",
+                        "id": "916c4312706cf026972898993da5a38a",
+                        "passes": 12,
+                        "fails": 0
+                    }
+                },
+                "name": "Edit catalog",
+                "path": "::Edit catalog",
+                "id": "1becc4fe3656561c24d3b2cd05cda848",
+                "groups": {}
+            },
+            "Archive catalog": {
+                "name": "Archive catalog",
+                "path": "::Archive catalog",
+                "id": "dcda8a2f27fdfbaec3d50ef102274503",
+                "groups": {},
+                "checks": {
+                        "Archive catalog - status is 2xx": {
+                            "name": "Archive catalog - status is 2xx",
+                            "path": "::Archive catalog::Archive catalog - status is 2xx",
+                            "id": "9e8ab631d4ca5b9dc76d1c9a6b4717e5",
+                            "passes": 12,
+                            "fails": 0
+                        }
+                    }
+            },
+            "Refresh catalog": {
+                "checks": {
+                    "Refresh catalog - status is 2xx": {
+                        "path": "::Refresh catalog::Refresh catalog - status is 2xx",
+                        "id": "5a2032d31addb7e160d450cbf017cecc",
+                        "passes": 12,
+                        "fails": 0,
+                        "name": "Refresh catalog - status is 2xx"
+                    }
+                },
+                "name": "Refresh catalog",
+                "path": "::Refresh catalog",
+                "id": "356a1748378eb39e5e58761d35dbed6a",
+                "groups": {}
+            },
+            "Delete catalog": {
+                "name": "Delete catalog",
+                "path": "::Delete catalog",
+                "id": "3e9dba8109ac71212f634542aa938fe2",
+                "groups": {},
+                "checks": {
+                        "Delete catalog - status is 2xx": {
+                            "id": "baeefaf9f8bba79a2d71c010645d6ac0",
+                            "passes": 12,
+                            "fails": 0,
+                            "name": "Delete catalog - status is 2xx",
+                            "path": "::Delete catalog::Delete catalog - status is 2xx"
+                        }
+                    }
+            }
+        },
+        "checks": {},
+        "name": ""
+    }
+}

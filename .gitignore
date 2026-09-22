@@ -1,0 +1,17 @@
+node_modules
+dist
+build
+.env
+.env.local
+.env.*.local
+*.log
+logs
+coverage
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+uploads
+storage
+phase*.txt
+audit/*.json
+audit/tmp-ms-script.js

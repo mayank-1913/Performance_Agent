@@ -1,0 +1,15 @@
+{
+  "name": "@perf/worker-runner",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local K6 execution worker (process manager, env injector, stream handler, lifecycle)",
+  "main": "src/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "test": "node --test \"test/*.test.js\"",
+    "lint": "echo \"(lint not configured yet)\""
+  },
+  "dependencies": {
+    "uuid": "^9.0.1"
+  }
+}

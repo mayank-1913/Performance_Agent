@@ -1,0 +1,1218 @@
+{
+  "summary": {
+    "startedAt": "2026-05-26T11:15:22.055Z",
+    "endedAt": "2026-05-26T11:17:41.482Z",
+    "durationMs": 139427,
+    "iterations": 12,
+    "vusMax": 5,
+    "requests": {
+      "total": 540,
+      "passed": 540,
+      "failed": 0,
+      "errorRate": 0,
+      "rps": 3.87,
+      "throughputBytesPerSec": 19445.72
+    },
+    "responseTime": {
+      "avg": 34.18,
+      "min": 29.07,
+      "max": 116.7,
+      "med": 32.63,
+      "p90": 38.65,
+      "p95": 42.87
+    },
+    "checks": {
+      "total": null,
+      "passes": 539,
+      "fails": 0,
+      "passRate": null
+    },
+    "network": {
+      "dataSent": 163133,
+      "dataReceived": 2548125
+    },
+    "pointsParsed": 6265
+  },
+  "thresholds": [
+    {
+      "metric": "http_req_duration",
+      "expression": "p(95)<2000",
+      "ok": true,
+      "lastValue": null
+    },
+    {
+      "metric": "http_req_failed",
+      "expression": "rate<0.05",
+      "ok": true,
+      "lastValue": 0
+    }
+  ],
+  "timeseries": {
+    "bucketSeconds": 2,
+    "points": [
+      {
+        "t": "2026-05-26T11:15:22.000Z",
+        "vus": 1,
+        "rps": 1,
+        "errors": 0,
+        "p95": 32.87,
+        "throughput": 5424.5
+      },
+      {
+        "t": "2026-05-26T11:15:24.000Z",
+        "vus": 1,
+        "rps": 1,
+        "errors": 0,
+        "p95": 32.26,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:15:26.000Z",
+        "vus": 1,
+        "rps": 1,
+        "errors": 0,
+        "p95": 30.31,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:15:28.000Z",
+        "vus": 1,
+        "rps": 1,
+        "errors": 0,
+        "p95": 30.13,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:15:30.000Z",
+        "vus": 2,
+        "rps": 2,
+        "errors": 0,
+        "p95": 35.27,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:15:32.000Z",
+        "vus": 2,
+        "rps": 2,
+        "errors": 0,
+        "p95": 35.88,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:15:34.000Z",
+        "vus": 2,
+        "rps": 2,
+        "errors": 0,
+        "p95": 35.33,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:15:36.000Z",
+        "vus": 2,
+        "rps": 2,
+        "errors": 0,
+        "p95": 46.06,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:15:38.000Z",
+        "vus": 3,
+        "rps": 3,
+        "errors": 0,
+        "p95": 44.6,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:15:40.000Z",
+        "vus": 3,
+        "rps": 3,
+        "errors": 0,
+        "p95": 31.82,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:15:42.000Z",
+        "vus": 3,
+        "rps": 2.5,
+        "errors": 0,
+        "p95": 33.33,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:15:44.000Z",
+        "vus": 4,
+        "rps": 3.5,
+        "errors": 0,
+        "p95": 47.11,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:15:46.000Z",
+        "vus": 4,
+        "rps": 4,
+        "errors": 0,
+        "p95": 40.72,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:15:48.000Z",
+        "vus": 4,
+        "rps": 4,
+        "errors": 0,
+        "p95": 37.04,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:15:50.000Z",
+        "vus": 4,
+        "rps": 3.5,
+        "errors": 0,
+        "p95": 41.18,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:15:52.000Z",
+        "vus": 5,
+        "rps": 4.5,
+        "errors": 0,
+        "p95": 39.35,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:15:54.000Z",
+        "vus": 5,
+        "rps": 5,
+        "errors": 0,
+        "p95": 38.27,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:15:56.000Z",
+        "vus": 5,
+        "rps": 4.5,
+        "errors": 0,
+        "p95": 46.17,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:15:58.000Z",
+        "vus": 5,
+        "rps": 5,
+        "errors": 0,
+        "p95": 33.12,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:16:00.000Z",
+        "vus": 5,
+        "rps": 5,
+        "errors": 0,
+        "p95": 39.24,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:16:02.000Z",
+        "vus": 5,
+        "rps": 5,
+        "errors": 0,
+        "p95": 34.26,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:16:04.000Z",
+        "vus": 5,
+        "rps": 4.5,
+        "errors": 0,
+        "p95": 36.27,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:16:06.000Z",
+        "vus": 5,
+        "rps": 5,
+        "errors": 0,
+        "p95": 35.07,
+        "throughput": 107322
+      },
+      {
+        "t": "2026-05-26T11:16:08.000Z",
+        "vus": 5,
+        "rps": 5,
+        "errors": 0,
+        "p95": 36.31,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:16:10.000Z",
+        "vus": 5,
+        "rps": 4.5,
+        "errors": 0,
+        "p95": 34.06,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:16:12.000Z",
+        "vus": 5,
+        "rps": 5,
+        "errors": 0,
+        "p95": 32.78,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:16:14.000Z",
+        "vus": 5,
+        "rps": 5,
+        "errors": 0,
+        "p95": 33.81,
+        "throughput": 107340.5
+      },
+      {
+        "t": "2026-05-26T11:16:16.000Z",
+        "vus": 5,
+        "rps": 5,
+        "errors": 0,
+        "p95": 35.21,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:16:18.000Z",
+        "vus": 5,
+        "rps": 5,
+        "errors": 0,
+        "p95": 34.95,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:16:20.000Z",
+        "vus": 5,
+        "rps": 4,
+        "errors": 0,
+        "p95": 38.65,
+        "throughput": 107340.5
+      },
+      {
+        "t": "2026-05-26T11:16:22.000Z",
+        "vus": 5,
+        "rps": 5,
+        "errors": 0,
+        "p95": 34.46,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:16:24.000Z",
+        "vus": 5,
+        "rps": 5,
+        "errors": 0,
+        "p95": 32.88,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:16:26.000Z",
+        "vus": 5,
+        "rps": 5,
+        "errors": 0,
+        "p95": 32.93,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:16:28.000Z",
+        "vus": 5,
+        "rps": 4.5,
+        "errors": 0,
+        "p95": 34.81,
+        "throughput": 107340.5
+      },
+      {
+        "t": "2026-05-26T11:16:30.000Z",
+        "vus": 5,
+        "rps": 5,
+        "errors": 0,
+        "p95": 34.05,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:16:32.000Z",
+        "vus": 5,
+        "rps": 5,
+        "errors": 0,
+        "p95": 33.76,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:16:34.000Z",
+        "vus": 5,
+        "rps": 4.5,
+        "errors": 0,
+        "p95": 33.17,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:16:36.000Z",
+        "vus": 5,
+        "rps": 5,
+        "errors": 0,
+        "p95": 34.8,
+        "throughput": 107371.5
+      },
+      {
+        "t": "2026-05-26T11:16:38.000Z",
+        "vus": 5,
+        "rps": 5,
+        "errors": 0,
+        "p95": 34.04,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:16:40.000Z",
+        "vus": 5,
+        "rps": 5,
+        "errors": 0,
+        "p95": 36.65,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:16:42.000Z",
+        "vus": 5,
+        "rps": 4.5,
+        "errors": 0,
+        "p95": 36.65,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:16:44.000Z",
+        "vus": 5,
+        "rps": 5,
+        "errors": 0,
+        "p95": 35.34,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:16:46.000Z",
+        "vus": 5,
+        "rps": 5,
+        "errors": 0,
+        "p95": 33.53,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:16:48.000Z",
+        "vus": 5,
+        "rps": 5,
+        "errors": 0,
+        "p95": 34.68,
+        "throughput": 103812.5
+      },
+      {
+        "t": "2026-05-26T11:16:50.000Z",
+        "vus": 5,
+        "rps": 4,
+        "errors": 0,
+        "p95": 32.97,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:16:52.000Z",
+        "vus": 5,
+        "rps": 5,
+        "errors": 0,
+        "p95": 33.02,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:16:54.000Z",
+        "vus": 5,
+        "rps": 5,
+        "errors": 0,
+        "p95": 39.55,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:16:56.000Z",
+        "vus": 5,
+        "rps": 5,
+        "errors": 0,
+        "p95": 53.33,
+        "throughput": 103828
+      },
+      {
+        "t": "2026-05-26T11:16:58.000Z",
+        "vus": 5,
+        "rps": 4.5,
+        "errors": 0,
+        "p95": 113.2,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:17:00.000Z",
+        "vus": 5,
+        "rps": 5,
+        "errors": 0,
+        "p95": 33.68,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:17:02.000Z",
+        "vus": 5,
+        "rps": 5,
+        "errors": 0,
+        "p95": 34.62,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:17:04.000Z",
+        "vus": 5,
+        "rps": 4.5,
+        "errors": 0,
+        "p95": 42.62,
+        "throughput": 103812.5
+      },
+      {
+        "t": "2026-05-26T11:17:06.000Z",
+        "vus": 5,
+        "rps": 5,
+        "errors": 0,
+        "p95": 36.67,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:17:08.000Z",
+        "vus": 5,
+        "rps": 5,
+        "errors": 0,
+        "p95": 36.79,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:17:10.000Z",
+        "vus": 5,
+        "rps": 4.5,
+        "errors": 0,
+        "p95": 36.54,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:17:12.000Z",
+        "vus": 4,
+        "rps": 4,
+        "errors": 0,
+        "p95": 44.35,
+        "throughput": 103812.5
+      },
+      {
+        "t": "2026-05-26T11:17:14.000Z",
+        "vus": 4,
+        "rps": 4,
+        "errors": 0,
+        "p95": 44.66,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:17:16.000Z",
+        "vus": 4,
+        "rps": 4,
+        "errors": 0,
+        "p95": 36.61,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:17:18.000Z",
+        "vus": 4,
+        "rps": 3,
+        "errors": 0,
+        "p95": 32.47,
+        "throughput": 103812.5
+      },
+      {
+        "t": "2026-05-26T11:17:20.000Z",
+        "vus": 3,
+        "rps": 3,
+        "errors": 0,
+        "p95": 33.18,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:17:22.000Z",
+        "vus": 3,
+        "rps": 3,
+        "errors": 0,
+        "p95": 34.24,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:17:24.000Z",
+        "vus": 3,
+        "rps": 3,
+        "errors": 0,
+        "p95": 30.4,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:17:26.000Z",
+        "vus": 3,
+        "rps": 3,
+        "errors": 0,
+        "p95": 32.79,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:17:28.000Z",
+        "vus": 3,
+        "rps": 3,
+        "errors": 0,
+        "p95": 35.37,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:17:30.000Z",
+        "vus": 3,
+        "rps": 3,
+        "errors": 0,
+        "p95": 32.78,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:17:32.000Z",
+        "vus": 3,
+        "rps": 2.5,
+        "errors": 0,
+        "p95": 33.4,
+        "throughput": 103812.5
+      },
+      {
+        "t": "2026-05-26T11:17:34.000Z",
+        "vus": 2,
+        "rps": 1.5,
+        "errors": 0,
+        "p95": 33.61,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:17:36.000Z",
+        "vus": 2,
+        "rps": 2,
+        "errors": 0,
+        "p95": 32.52,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:17:38.000Z",
+        "vus": 2,
+        "rps": 2,
+        "errors": 0,
+        "p95": 33.35,
+        "throughput": 0
+      },
+      {
+        "t": "2026-05-26T11:17:40.000Z",
+        "vus": 2,
+        "rps": 0.5,
+        "errors": 0,
+        "p95": 35.94,
+        "throughput": 190599
+      }
+    ]
+  },
+  "requests": [
+    {
+      "name": "https://uplatform.mdsp.co/user/logout",
+      "group": "::Logout",
+      "method": "POST",
+      "count": 13,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 41.97,
+      "min": 31.86,
+      "max": 94.59,
+      "p90": 48.21,
+      "p95": 58.86,
+      "p99": 58.86,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/user/advertisers?startDate=2024-07-04&endDate=2025-05-12",
+      "group": "::Advertiser list",
+      "method": "GET",
+      "count": 13,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 41,
+      "min": 29.4,
+      "max": 116.7,
+      "p90": 41.85,
+      "p95": 43.23,
+      "p99": 43.23,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/jampp_audience_sync/device_type",
+      "group": "::Get device type list",
+      "method": "POST",
+      "count": 13,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 40.33,
+      "min": 30.61,
+      "max": 113.2,
+      "p90": 34.81,
+      "p95": 51.79,
+      "p99": 51.79,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co//user/login",
+      "group": "::setup",
+      "method": "POST",
+      "count": 1,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 39.47,
+      "min": 39.47,
+      "max": 39.47,
+      "p90": 39.47,
+      "p95": 39.47,
+      "p99": 39.47,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/user/userInfo?id=5c1519df-d54d-4db0-a588-5f7b2fb8e925",
+      "group": "::User list",
+      "method": "GET",
+      "count": 13,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 38.99,
+      "min": 29.62,
+      "max": 53.56,
+      "p90": 49.29,
+      "p95": 53.33,
+      "p99": 53.33,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/feed_curator/catalog",
+      "group": "::Get catalog list",
+      "method": "POST",
+      "count": 12,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 35.84,
+      "min": 29.64,
+      "max": 51.2,
+      "p90": 40.24,
+      "p95": 45.07,
+      "p99": 45.07,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/admin/billingModel",
+      "group": "::Get billing model list",
+      "method": "GET",
+      "count": 13,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 35.31,
+      "min": 31.02,
+      "max": 57.22,
+      "p90": 36.31,
+      "p95": 38.28,
+      "p99": 38.28,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/admin/campaign_management",
+      "group": "::Campaign Management",
+      "method": "POST",
+      "count": 13,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 35.09,
+      "min": 30.34,
+      "max": 47.11,
+      "p90": 38.08,
+      "p95": 45.21,
+      "p99": 45.21,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/jampp_audience_sync/add_audience",
+      "group": "::Add audience",
+      "method": "POST",
+      "count": 13,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 34.98,
+      "min": 30.75,
+      "max": 44.35,
+      "p90": 40.4,
+      "p95": 40.72,
+      "p99": 40.72,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/admin/getRegion",
+      "group": "::Get region list",
+      "method": "GET",
+      "count": 13,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 34.59,
+      "min": 30.58,
+      "max": 49.77,
+      "p90": 35.33,
+      "p95": 41.18,
+      "p99": 41.18,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/admin/editadvertiser/9188ee78-322a-4527-b503-dc16d46318d5",
+      "group": "::Change advertiser status",
+      "method": "POST",
+      "count": 13,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 34.54,
+      "min": 30.77,
+      "max": 48.38,
+      "p90": 38.65,
+      "p95": 38.85,
+      "p99": 38.85,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/feed_curator/sources/ff993b43-df6d-4fb4-8fb0-8644846e3276",
+      "group": "::Get source list",
+      "method": "GET",
+      "count": 13,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 34.19,
+      "min": 29.51,
+      "max": 43.89,
+      "p90": 39.72,
+      "p95": 42.62,
+      "p99": 42.62,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/feed_curator/source_header",
+      "group": "::Get source header",
+      "method": "POST",
+      "count": 12,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 34.11,
+      "min": 29.71,
+      "max": 42.75,
+      "p90": 36.11,
+      "p95": 39.67,
+      "p99": 39.67,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/admin/payoutEvent",
+      "group": "::Get payout event list",
+      "method": "POST",
+      "count": 13,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 34.07,
+      "min": 30.25,
+      "max": 46.17,
+      "p90": 37.9,
+      "p95": 40.98,
+      "p99": 40.98,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/user/create",
+      "group": "::Add user",
+      "method": "POST",
+      "count": 26,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 33.94,
+      "min": 29.42,
+      "max": 45.52,
+      "p90": 40.6,
+      "p95": 42.08,
+      "p99": 44.6,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/feed_curator/add_feed_source",
+      "group": "::Add feed source",
+      "method": "POST",
+      "count": 13,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 33.89,
+      "min": 31.16,
+      "max": 39.35,
+      "p90": 35.34,
+      "p95": 38.35,
+      "p99": 38.35,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/feed_curator/restore_source/8986b170-dae7-490a-8c6e-5e0f426e4f21",
+      "group": "::Restore source",
+      "method": "POST",
+      "count": 13,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 33.72,
+      "min": 30.4,
+      "max": 40.38,
+      "p90": 36.65,
+      "p95": 37.13,
+      "p99": 37.13,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/admin/internal_dashboard",
+      "group": "::Internal Dashboard",
+      "method": "POST",
+      "count": 13,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 33.63,
+      "min": 30.62,
+      "max": 48.54,
+      "p90": 34.46,
+      "p95": 35.07,
+      "p99": 35.07,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/admin/advertiser",
+      "group": "::Add advertiser",
+      "method": "POST",
+      "count": 13,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 33.46,
+      "min": 30.79,
+      "max": 41.85,
+      "p90": 34.62,
+      "p95": 36.79,
+      "p99": 36.79,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/feed_curator/edit_feed_source",
+      "group": "::Edit feed source",
+      "method": "POST",
+      "count": 25,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 33.44,
+      "min": 30.56,
+      "max": 40.21,
+      "p90": 36.16,
+      "p95": 39.24,
+      "p99": 39.26,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/user/getAdvertisers",
+      "group": "::Get login advertiser list",
+      "method": "GET",
+      "count": 13,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 33.36,
+      "min": 30.07,
+      "max": 44.66,
+      "p90": 34.24,
+      "p95": 38.27,
+      "p99": 38.27,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/jampp_audience_sync/edit_audience",
+      "group": "::Edit audience",
+      "method": "POST",
+      "count": 13,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 33.35,
+      "min": 29.71,
+      "max": 49.06,
+      "p90": 33.6,
+      "p95": 34.24,
+      "p99": 34.24,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/admin/adv/9188ee78-322a-4527-b503-dc16d46318d5",
+      "group": "::Get edit advertiser form data",
+      "method": "GET",
+      "count": 13,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 33.34,
+      "min": 29.44,
+      "max": 42.85,
+      "p90": 35.33,
+      "p95": 36.27,
+      "p99": 36.27,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/feed_curator/refresh_source/8986b170-dae7-490a-8c6e-5e0f426e4f21",
+      "group": "::Refresh source",
+      "method": "POST",
+      "count": 13,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 33.3,
+      "min": 29.78,
+      "max": 39.28,
+      "p90": 34.92,
+      "p95": 35.94,
+      "p99": 35.94,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/user/userActivityLogs",
+      "group": "::User activity logs",
+      "method": "GET",
+      "count": 13,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 33.22,
+      "min": 29.53,
+      "max": 36.67,
+      "p90": 35.1,
+      "p95": 35.27,
+      "p99": 35.27,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/jampp_audience_sync/archive_audience",
+      "group": "::Archive audience",
+      "method": "POST",
+      "count": 13,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 33.2,
+      "min": 30.69,
+      "max": 35.53,
+      "p90": 34.77,
+      "p95": 35.25,
+      "p99": 35.25,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/feed_curator/refresh_catalog",
+      "group": "::Refresh catalog",
+      "method": "POST",
+      "count": 12,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 33.18,
+      "min": 29.1,
+      "max": 40.74,
+      "p90": 35.64,
+      "p95": 36.54,
+      "p99": 36.54,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/user/editUser",
+      "group": "::Edit user",
+      "method": "POST",
+      "count": 13,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 33.17,
+      "min": 30.55,
+      "max": 37.93,
+      "p90": 34.26,
+      "p95": 35.7,
+      "p99": 35.7,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/feed_curator/add_catalog",
+      "group": "::Add catalog",
+      "method": "POST",
+      "count": 12,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 33.08,
+      "min": 30.85,
+      "max": 37.88,
+      "p90": 35.27,
+      "p95": 35.37,
+      "p99": 35.37,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/feed_curator/frequency",
+      "group": "::Get frequency list",
+      "method": "GET",
+      "count": 13,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 32.89,
+      "min": 29.69,
+      "max": 39.55,
+      "p90": 33.68,
+      "p95": 36.61,
+      "p99": 36.61,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/admin/user/advertisers",
+      "group": "::Get roles",
+      "method": "GET",
+      "count": 13,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 32.86,
+      "min": 30.18,
+      "max": 37.04,
+      "p90": 34.34,
+      "p95": 35.88,
+      "p99": 35.88,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/user/deleteUser/a766597b-f9e1-4f2f-9717-338bc1cb8fda",
+      "group": "::Delete user",
+      "method": "POST",
+      "count": 13,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 32.8,
+      "min": 29.9,
+      "max": 35.96,
+      "p90": 35.06,
+      "p95": 35.12,
+      "p99": 35.12,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/feed_curator/archive_source/8986b170-dae7-490a-8c6e-5e0f426e4f21",
+      "group": "::Archive source",
+      "method": "POST",
+      "count": 25,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 32.72,
+      "min": 30.05,
+      "max": 41.95,
+      "p90": 33.53,
+      "p95": 33.69,
+      "p99": 37.23,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/jampp_audience_sync/audiences",
+      "group": "::Get audience list",
+      "method": "POST",
+      "count": 13,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 32.66,
+      "min": 30.16,
+      "max": 36.24,
+      "p90": 34,
+      "p95": 35.99,
+      "p99": 35.99,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/user/userType",
+      "group": "::Get user types list",
+      "method": "GET",
+      "count": 13,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 32.58,
+      "min": 30.24,
+      "max": 35.46,
+      "p90": 35.01,
+      "p95": 35.16,
+      "p99": 35.16,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/admin/editadvertiser/916412d5-b7e0-4d2c-966d-70eeab25dd05",
+      "group": "::Edit advertiser",
+      "method": "POST",
+      "count": 13,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 32.55,
+      "min": 30.68,
+      "max": 35.54,
+      "p90": 34.58,
+      "p95": 34.95,
+      "p99": 34.95,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/feed_curator/time",
+      "group": "::Get time list",
+      "method": "GET",
+      "count": 13,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 32.51,
+      "min": 30.14,
+      "max": 38.65,
+      "p90": 33.79,
+      "p95": 34.93,
+      "p99": 34.93,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/admin/country",
+      "group": "::Get country list",
+      "method": "GET",
+      "count": 13,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 32.5,
+      "min": 29.54,
+      "max": 38.29,
+      "p90": 33.63,
+      "p95": 37.94,
+      "p99": 37.94,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/feed_curator/combine_source",
+      "group": "::Combine source",
+      "method": "POST",
+      "count": 13,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 32.43,
+      "min": 30.08,
+      "max": 35.21,
+      "p90": 34.1,
+      "p95": 34.42,
+      "p99": 34.42,
+      "lastStatus": "200"
+    },
+    {
+      "name": "https://uplatform.mdsp.co/feed_curator/delete_catalog/65b095a0-e24e-4889-a597-553074cd94ba",
+      "group": "::Delete catalog",
+      "method": "POST",
+      "count": 12,
+      "errors": 0,
+      "errorRate": 0,
+      "avg": 31.9,
+      "min": 29.07,
+      "max": 36.34,
+      "p90": 33.58,
+      "p95": 33.98,
+      "p99": 33.98,
+      "lastStatus": "200"
+    }
+  ],
+  "failures": []
+}

@@ -1,0 +1,736 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>K6 report · fd787a9b-021d-4b3c-99f3-ae8c0a438c8e</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0f172a;
+    --panel: #111827;
+    --panel-2: #0b1220;
+    --border: #1f2937;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --ok: #34d399;
+    --bad: #f87171;
+    --warn: #fbbf24;
+    --accent: #60a5fa;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px; background: var(--bg); color: var(--text);
+         font-family: -apple-system, "Segoe UI", Inter, system-ui, sans-serif; }
+  h1 { margin: 0 0 4px; font-size: 18px; }
+  h2 { margin: 24px 0 8px; font-size: 14px; color: var(--muted); text-transform: uppercase;
+       letter-spacing: 0.05em; }
+  .container { max-width: 1280px; margin: 0 auto; }
+  .meta { color: var(--muted); font-size: 12px; }
+  .grid { display: grid; gap: 12px; }
+  .grid-cards { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+  .grid-charts { grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+          padding: 16px; }
+  .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+                color: var(--muted); }
+  .stat-value { margin-top: 6px; font-size: 22px; font-weight: 600; }
+  .stat-sub { margin-top: 4px; font-size: 12px; color: var(--muted); }
+  .ok { color: var(--ok); }
+  .bad { color: var(--bad); }
+  .warn { color: var(--warn); }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th { text-align: left; font-weight: 600; font-size: 11px; color: var(--muted);
+             text-transform: uppercase; letter-spacing: 0.05em; padding: 8px 10px;
+             background: var(--panel-2); position: sticky; top: 0; }
+  tbody td { padding: 8px 10px; border-top: 1px solid var(--border); }
+  tbody tr:hover { background: rgba(96,165,250,0.05); }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; }
+  .scroll-y { max-height: 360px; overflow: auto; border: 1px solid var(--border);
+              border-radius: 8px; }
+  .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px;
+           font-weight: 600; }
+  .badge.ok { background: rgba(52,211,153,0.15); color: var(--ok); }
+  .badge.bad { background: rgba(248,113,113,0.15); color: var(--bad); }
+  canvas { display: block; width: 100%; height: 120px; }
+  .chart-title { display: flex; justify-content: space-between; font-size: 12px;
+                 color: var(--muted); margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>K6 performance report</h1>
+  <div class="meta">
+    Run <span class="mono">fd787a9b-021d-4b3c-99f3-ae8c0a438c8e</span> ·
+    Script <span class="mono">77bd3730-33bc-4725-acda-414051aad0ad</span> ·
+    Status <strong class="ok">completed</strong> ·
+    Started 2026-05-26T11:15:22.055Z ·
+    Duration 139.43s
+  </div>
+
+  <h2>Summary</h2>
+  <div class="grid grid-cards">
+    <div class="card">
+    <div class="stat-label">Total requests</div>
+    <div class="stat-value ">540</div>
+    
+  </div>
+    <div class="card">
+    <div class="stat-label">Failed</div>
+    <div class="stat-value ok">0</div>
+    <div class="stat-sub">0.00%</div>
+  </div>
+    <div class="card">
+    <div class="stat-label">RPS (avg)</div>
+    <div class="stat-value ">3.87</div>
+    
+  </div>
+    <div class="card">
+    <div class="stat-label">VUs (max)</div>
+    <div class="stat-value ">5</div>
+    
+  </div>
+    <div class="card">
+    <div class="stat-label">Iterations</div>
+    <div class="stat-value ">12</div>
+    
+  </div>
+    <div class="card">
+    <div class="stat-label">Avg response time</div>
+    <div class="stat-value ">34.18ms</div>
+    
+  </div>
+    <div class="card">
+    <div class="stat-label">p95 response time</div>
+    <div class="stat-value ">42.87ms</div>
+    
+  </div>
+    <div class="card">
+    <div class="stat-label">p99 response time</div>
+    <div class="stat-value ">—</div>
+    
+  </div>
+    <div class="card">
+    <div class="stat-label">Data sent</div>
+    <div class="stat-value ">159 KB</div>
+    
+  </div>
+    <div class="card">
+    <div class="stat-label">Data received</div>
+    <div class="stat-value ">2.4 MB</div>
+    
+  </div>
+    <div class="card">
+    <div class="stat-label">Throughput</div>
+    <div class="stat-value ">19.0 KB/s</div>
+    
+  </div>
+    <div class="card">
+    <div class="stat-label">Checks pass rate</div>
+    <div class="stat-value ">—</div>
+    
+  </div>
+  </div>
+
+  <h2>Thresholds</h2>
+  <div class="card">
+    <div style="display:flex; gap:16px; margin-bottom:8px;">
+      <div><span class="badge ok">passed 2</span></div>
+      <div><span class="badge bad">failed 0</span></div>
+    </div>
+    <div class="scroll-y"><table>
+          <thead><tr><th>Metric</th><th>Expression</th><th>Status</th><th>Last value</th></tr></thead>
+          <tbody><tr>
+                <td class="mono">http_req_duration</td>
+                <td class="mono">p(95)&lt;2000</td>
+                <td><span class="badge ok">pass</span></td>
+                <td class="mono">—</td>
+              </tr><tr>
+                <td class="mono">http_req_failed</td>
+                <td class="mono">rate&lt;0.05</td>
+                <td><span class="badge ok">pass</span></td>
+                <td class="mono">0</td>
+              </tr></tbody>
+        </table></div>
+  </div>
+
+  <h2>Charts</h2>
+  <div class="grid grid-charts">
+    <div class="card">
+    <div class="chart-title"><span>p95 response time</span><span>ms</span></div>
+    <canvas id="p95Chart"></canvas>
+  </div>
+    <div class="card">
+    <div class="chart-title"><span>Requests per second</span><span>rps</span></div>
+    <canvas id="rpsChart"></canvas>
+  </div>
+    <div class="card">
+    <div class="chart-title"><span>Errors per bucket</span><span></span></div>
+    <canvas id="errChart"></canvas>
+  </div>
+    <div class="card">
+    <div class="chart-title"><span>Virtual users</span><span>vus</span></div>
+    <canvas id="vusChart"></canvas>
+  </div>
+  </div>
+
+  <h2>Top requests by response time</h2>
+  <div class="scroll-y">
+    <table>
+      <thead><tr>
+        <th>Name</th><th>Method</th><th>Count</th><th>Avg</th><th>Min</th>
+        <th>Max</th><th>p90</th><th>p95</th><th>p99</th><th>Errors</th><th>Error rate</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+                  <td>https://uplatform.mdsp.co/user/logout</td>
+                  <td class="mono">POST</td>
+                  <td class="mono">13</td>
+                  <td class="mono">41.97ms</td>
+                  <td class="mono">31.86ms</td>
+                  <td class="mono">94.59ms</td>
+                  <td class="mono">48.21ms</td>
+                  <td class="mono">58.86ms</td>
+                  <td class="mono">58.86ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/user/advertisers?startDate=2024-07-04&amp;endDate=2025-05-12</td>
+                  <td class="mono">GET</td>
+                  <td class="mono">13</td>
+                  <td class="mono">41.00ms</td>
+                  <td class="mono">29.40ms</td>
+                  <td class="mono">116.70ms</td>
+                  <td class="mono">41.85ms</td>
+                  <td class="mono">43.23ms</td>
+                  <td class="mono">43.23ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/jampp_audience_sync/device_type</td>
+                  <td class="mono">POST</td>
+                  <td class="mono">13</td>
+                  <td class="mono">40.33ms</td>
+                  <td class="mono">30.61ms</td>
+                  <td class="mono">113.20ms</td>
+                  <td class="mono">34.81ms</td>
+                  <td class="mono">51.79ms</td>
+                  <td class="mono">51.79ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co//user/login</td>
+                  <td class="mono">POST</td>
+                  <td class="mono">1</td>
+                  <td class="mono">39.47ms</td>
+                  <td class="mono">39.47ms</td>
+                  <td class="mono">39.47ms</td>
+                  <td class="mono">39.47ms</td>
+                  <td class="mono">39.47ms</td>
+                  <td class="mono">39.47ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/user/userInfo?id=5c1519df-d54d-4db0-a588-5f7b2fb8e925</td>
+                  <td class="mono">GET</td>
+                  <td class="mono">13</td>
+                  <td class="mono">38.99ms</td>
+                  <td class="mono">29.62ms</td>
+                  <td class="mono">53.56ms</td>
+                  <td class="mono">49.29ms</td>
+                  <td class="mono">53.33ms</td>
+                  <td class="mono">53.33ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/feed_curator/catalog</td>
+                  <td class="mono">POST</td>
+                  <td class="mono">12</td>
+                  <td class="mono">35.84ms</td>
+                  <td class="mono">29.64ms</td>
+                  <td class="mono">51.20ms</td>
+                  <td class="mono">40.24ms</td>
+                  <td class="mono">45.07ms</td>
+                  <td class="mono">45.07ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/admin/billingModel</td>
+                  <td class="mono">GET</td>
+                  <td class="mono">13</td>
+                  <td class="mono">35.31ms</td>
+                  <td class="mono">31.02ms</td>
+                  <td class="mono">57.22ms</td>
+                  <td class="mono">36.31ms</td>
+                  <td class="mono">38.28ms</td>
+                  <td class="mono">38.28ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/admin/campaign_management</td>
+                  <td class="mono">POST</td>
+                  <td class="mono">13</td>
+                  <td class="mono">35.09ms</td>
+                  <td class="mono">30.34ms</td>
+                  <td class="mono">47.11ms</td>
+                  <td class="mono">38.08ms</td>
+                  <td class="mono">45.21ms</td>
+                  <td class="mono">45.21ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/jampp_audience_sync/add_audience</td>
+                  <td class="mono">POST</td>
+                  <td class="mono">13</td>
+                  <td class="mono">34.98ms</td>
+                  <td class="mono">30.75ms</td>
+                  <td class="mono">44.35ms</td>
+                  <td class="mono">40.40ms</td>
+                  <td class="mono">40.72ms</td>
+                  <td class="mono">40.72ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/admin/getRegion</td>
+                  <td class="mono">GET</td>
+                  <td class="mono">13</td>
+                  <td class="mono">34.59ms</td>
+                  <td class="mono">30.58ms</td>
+                  <td class="mono">49.77ms</td>
+                  <td class="mono">35.33ms</td>
+                  <td class="mono">41.18ms</td>
+                  <td class="mono">41.18ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/admin/editadvertiser/9188ee78-322a-4527-b503-dc16d46318d5</td>
+                  <td class="mono">POST</td>
+                  <td class="mono">13</td>
+                  <td class="mono">34.54ms</td>
+                  <td class="mono">30.77ms</td>
+                  <td class="mono">48.38ms</td>
+                  <td class="mono">38.65ms</td>
+                  <td class="mono">38.85ms</td>
+                  <td class="mono">38.85ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/feed_curator/sources/ff993b43-df6d-4fb4-8fb0-8644846e3276</td>
+                  <td class="mono">GET</td>
+                  <td class="mono">13</td>
+                  <td class="mono">34.19ms</td>
+                  <td class="mono">29.51ms</td>
+                  <td class="mono">43.89ms</td>
+                  <td class="mono">39.72ms</td>
+                  <td class="mono">42.62ms</td>
+                  <td class="mono">42.62ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/feed_curator/source_header</td>
+                  <td class="mono">POST</td>
+                  <td class="mono">12</td>
+                  <td class="mono">34.11ms</td>
+                  <td class="mono">29.71ms</td>
+                  <td class="mono">42.75ms</td>
+                  <td class="mono">36.11ms</td>
+                  <td class="mono">39.67ms</td>
+                  <td class="mono">39.67ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/admin/payoutEvent</td>
+                  <td class="mono">POST</td>
+                  <td class="mono">13</td>
+                  <td class="mono">34.07ms</td>
+                  <td class="mono">30.25ms</td>
+                  <td class="mono">46.17ms</td>
+                  <td class="mono">37.90ms</td>
+                  <td class="mono">40.98ms</td>
+                  <td class="mono">40.98ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/user/create</td>
+                  <td class="mono">POST</td>
+                  <td class="mono">26</td>
+                  <td class="mono">33.94ms</td>
+                  <td class="mono">29.42ms</td>
+                  <td class="mono">45.52ms</td>
+                  <td class="mono">40.60ms</td>
+                  <td class="mono">42.08ms</td>
+                  <td class="mono">44.60ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/feed_curator/add_feed_source</td>
+                  <td class="mono">POST</td>
+                  <td class="mono">13</td>
+                  <td class="mono">33.89ms</td>
+                  <td class="mono">31.16ms</td>
+                  <td class="mono">39.35ms</td>
+                  <td class="mono">35.34ms</td>
+                  <td class="mono">38.35ms</td>
+                  <td class="mono">38.35ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/feed_curator/restore_source/8986b170-dae7-490a-8c6e-5e0f426e4f21</td>
+                  <td class="mono">POST</td>
+                  <td class="mono">13</td>
+                  <td class="mono">33.72ms</td>
+                  <td class="mono">30.40ms</td>
+                  <td class="mono">40.38ms</td>
+                  <td class="mono">36.65ms</td>
+                  <td class="mono">37.13ms</td>
+                  <td class="mono">37.13ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/admin/internal_dashboard</td>
+                  <td class="mono">POST</td>
+                  <td class="mono">13</td>
+                  <td class="mono">33.63ms</td>
+                  <td class="mono">30.62ms</td>
+                  <td class="mono">48.54ms</td>
+                  <td class="mono">34.46ms</td>
+                  <td class="mono">35.07ms</td>
+                  <td class="mono">35.07ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/admin/advertiser</td>
+                  <td class="mono">POST</td>
+                  <td class="mono">13</td>
+                  <td class="mono">33.46ms</td>
+                  <td class="mono">30.79ms</td>
+                  <td class="mono">41.85ms</td>
+                  <td class="mono">34.62ms</td>
+                  <td class="mono">36.79ms</td>
+                  <td class="mono">36.79ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/feed_curator/edit_feed_source</td>
+                  <td class="mono">POST</td>
+                  <td class="mono">25</td>
+                  <td class="mono">33.44ms</td>
+                  <td class="mono">30.56ms</td>
+                  <td class="mono">40.21ms</td>
+                  <td class="mono">36.16ms</td>
+                  <td class="mono">39.24ms</td>
+                  <td class="mono">39.26ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/user/getAdvertisers</td>
+                  <td class="mono">GET</td>
+                  <td class="mono">13</td>
+                  <td class="mono">33.36ms</td>
+                  <td class="mono">30.07ms</td>
+                  <td class="mono">44.66ms</td>
+                  <td class="mono">34.24ms</td>
+                  <td class="mono">38.27ms</td>
+                  <td class="mono">38.27ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/jampp_audience_sync/edit_audience</td>
+                  <td class="mono">POST</td>
+                  <td class="mono">13</td>
+                  <td class="mono">33.35ms</td>
+                  <td class="mono">29.71ms</td>
+                  <td class="mono">49.06ms</td>
+                  <td class="mono">33.60ms</td>
+                  <td class="mono">34.24ms</td>
+                  <td class="mono">34.24ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/admin/adv/9188ee78-322a-4527-b503-dc16d46318d5</td>
+                  <td class="mono">GET</td>
+                  <td class="mono">13</td>
+                  <td class="mono">33.34ms</td>
+                  <td class="mono">29.44ms</td>
+                  <td class="mono">42.85ms</td>
+                  <td class="mono">35.33ms</td>
+                  <td class="mono">36.27ms</td>
+                  <td class="mono">36.27ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/feed_curator/refresh_source/8986b170-dae7-490a-8c6e-5e0f426e4f21</td>
+                  <td class="mono">POST</td>
+                  <td class="mono">13</td>
+                  <td class="mono">33.30ms</td>
+                  <td class="mono">29.78ms</td>
+                  <td class="mono">39.28ms</td>
+                  <td class="mono">34.92ms</td>
+                  <td class="mono">35.94ms</td>
+                  <td class="mono">35.94ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/user/userActivityLogs</td>
+                  <td class="mono">GET</td>
+                  <td class="mono">13</td>
+                  <td class="mono">33.22ms</td>
+                  <td class="mono">29.53ms</td>
+                  <td class="mono">36.67ms</td>
+                  <td class="mono">35.10ms</td>
+                  <td class="mono">35.27ms</td>
+                  <td class="mono">35.27ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/jampp_audience_sync/archive_audience</td>
+                  <td class="mono">POST</td>
+                  <td class="mono">13</td>
+                  <td class="mono">33.20ms</td>
+                  <td class="mono">30.69ms</td>
+                  <td class="mono">35.53ms</td>
+                  <td class="mono">34.77ms</td>
+                  <td class="mono">35.25ms</td>
+                  <td class="mono">35.25ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/feed_curator/refresh_catalog</td>
+                  <td class="mono">POST</td>
+                  <td class="mono">12</td>
+                  <td class="mono">33.18ms</td>
+                  <td class="mono">29.10ms</td>
+                  <td class="mono">40.74ms</td>
+                  <td class="mono">35.64ms</td>
+                  <td class="mono">36.54ms</td>
+                  <td class="mono">36.54ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/user/editUser</td>
+                  <td class="mono">POST</td>
+                  <td class="mono">13</td>
+                  <td class="mono">33.17ms</td>
+                  <td class="mono">30.55ms</td>
+                  <td class="mono">37.93ms</td>
+                  <td class="mono">34.26ms</td>
+                  <td class="mono">35.70ms</td>
+                  <td class="mono">35.70ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/feed_curator/add_catalog</td>
+                  <td class="mono">POST</td>
+                  <td class="mono">12</td>
+                  <td class="mono">33.08ms</td>
+                  <td class="mono">30.85ms</td>
+                  <td class="mono">37.88ms</td>
+                  <td class="mono">35.27ms</td>
+                  <td class="mono">35.37ms</td>
+                  <td class="mono">35.37ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/feed_curator/frequency</td>
+                  <td class="mono">GET</td>
+                  <td class="mono">13</td>
+                  <td class="mono">32.89ms</td>
+                  <td class="mono">29.69ms</td>
+                  <td class="mono">39.55ms</td>
+                  <td class="mono">33.68ms</td>
+                  <td class="mono">36.61ms</td>
+                  <td class="mono">36.61ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/admin/user/advertisers</td>
+                  <td class="mono">GET</td>
+                  <td class="mono">13</td>
+                  <td class="mono">32.86ms</td>
+                  <td class="mono">30.18ms</td>
+                  <td class="mono">37.04ms</td>
+                  <td class="mono">34.34ms</td>
+                  <td class="mono">35.88ms</td>
+                  <td class="mono">35.88ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/user/deleteUser/a766597b-f9e1-4f2f-9717-338bc1cb8fda</td>
+                  <td class="mono">POST</td>
+                  <td class="mono">13</td>
+                  <td class="mono">32.80ms</td>
+                  <td class="mono">29.90ms</td>
+                  <td class="mono">35.96ms</td>
+                  <td class="mono">35.06ms</td>
+                  <td class="mono">35.12ms</td>
+                  <td class="mono">35.12ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/feed_curator/archive_source/8986b170-dae7-490a-8c6e-5e0f426e4f21</td>
+                  <td class="mono">POST</td>
+                  <td class="mono">25</td>
+                  <td class="mono">32.72ms</td>
+                  <td class="mono">30.05ms</td>
+                  <td class="mono">41.95ms</td>
+                  <td class="mono">33.53ms</td>
+                  <td class="mono">33.69ms</td>
+                  <td class="mono">37.23ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/jampp_audience_sync/audiences</td>
+                  <td class="mono">POST</td>
+                  <td class="mono">13</td>
+                  <td class="mono">32.66ms</td>
+                  <td class="mono">30.16ms</td>
+                  <td class="mono">36.24ms</td>
+                  <td class="mono">34.00ms</td>
+                  <td class="mono">35.99ms</td>
+                  <td class="mono">35.99ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/user/userType</td>
+                  <td class="mono">GET</td>
+                  <td class="mono">13</td>
+                  <td class="mono">32.58ms</td>
+                  <td class="mono">30.24ms</td>
+                  <td class="mono">35.46ms</td>
+                  <td class="mono">35.01ms</td>
+                  <td class="mono">35.16ms</td>
+                  <td class="mono">35.16ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/admin/editadvertiser/916412d5-b7e0-4d2c-966d-70eeab25dd05</td>
+                  <td class="mono">POST</td>
+                  <td class="mono">13</td>
+                  <td class="mono">32.55ms</td>
+                  <td class="mono">30.68ms</td>
+                  <td class="mono">35.54ms</td>
+                  <td class="mono">34.58ms</td>
+                  <td class="mono">34.95ms</td>
+                  <td class="mono">34.95ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/feed_curator/time</td>
+                  <td class="mono">GET</td>
+                  <td class="mono">13</td>
+                  <td class="mono">32.51ms</td>
+                  <td class="mono">30.14ms</td>
+                  <td class="mono">38.65ms</td>
+                  <td class="mono">33.79ms</td>
+                  <td class="mono">34.93ms</td>
+                  <td class="mono">34.93ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/admin/country</td>
+                  <td class="mono">GET</td>
+                  <td class="mono">13</td>
+                  <td class="mono">32.50ms</td>
+                  <td class="mono">29.54ms</td>
+                  <td class="mono">38.29ms</td>
+                  <td class="mono">33.63ms</td>
+                  <td class="mono">37.94ms</td>
+                  <td class="mono">37.94ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/feed_curator/combine_source</td>
+                  <td class="mono">POST</td>
+                  <td class="mono">13</td>
+                  <td class="mono">32.43ms</td>
+                  <td class="mono">30.08ms</td>
+                  <td class="mono">35.21ms</td>
+                  <td class="mono">34.10ms</td>
+                  <td class="mono">34.42ms</td>
+                  <td class="mono">34.42ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr><tr>
+                  <td>https://uplatform.mdsp.co/feed_curator/delete_catalog/65b095a0-e24e-4889-a597-553074cd94ba</td>
+                  <td class="mono">POST</td>
+                  <td class="mono">12</td>
+                  <td class="mono">31.90ms</td>
+                  <td class="mono">29.07ms</td>
+                  <td class="mono">36.34ms</td>
+                  <td class="mono">33.58ms</td>
+                  <td class="mono">33.98ms</td>
+                  <td class="mono">33.98ms</td>
+                  <td class="mono ">0</td>
+                  <td class="mono ">0.00%</td>
+                </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Failures</h2>
+  <div class="scroll-y">
+    <table>
+      <thead><tr><th>Name</th><th>Method</th><th>Count</th><th>Last status</th></tr></thead>
+      <tbody>
+        <tr><td colspan="4" style="text-align:center; color:var(--muted)">No failed HTTP requests captured.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="meta" style="margin-top:24px;">
+    Generated by Performance Agent · Self-contained HTML, no external requests.
+  </p>
+</div>
+
+<script>
+  (function() {
+    function drawLine(canvas, data) {
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      canvas.width = w * window.devicePixelRatio;
+      canvas.height = h * window.devicePixelRatio;
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      ctx.clearRect(0, 0, w, h);
+      if (!data || data.length === 0) {
+        ctx.fillStyle = '#475569';
+        ctx.font = '11px sans-serif';
+        ctx.fillText('No data', 8, h / 2);
+        return;
+      }
+      const max = Math.max(1, ...data);
+      const stepX = w / Math.max(1, data.length - 1);
+      ctx.strokeStyle = '#60a5fa';
+      ctx.fillStyle = 'rgba(96,165,250,0.10)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(0, h);
+      for (let i = 0; i < data.length; i++) {
+        const x = i * stepX;
+        const y = h - (data[i] / max) * (h - 8) - 2;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.lineTo(w, h);
+      ctx.lineTo(0, h);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      for (let i = 0; i < data.length; i++) {
+        const x = i * stepX;
+        const y = h - (data[i] / max) * (h - 8) - 2;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    const charts = JSON.parse(document.getElementById('chart-data').textContent);
+    drawLine(document.getElementById('p95Chart'), charts.p95);
+    drawLine(document.getElementById('rpsChart'), charts.rps);
+    drawLine(document.getElementById('errChart'), charts.err);
+    drawLine(document.getElementById('vusChart'), charts.vus);
+  })();
+</script>
+<script type="application/json" id="chart-data">{"p95":[32.87,32.26,30.31,30.13,35.27,35.88,35.33,46.06,44.6,31.82,33.33,47.11,40.72,37.04,41.18,39.35,38.27,46.17,33.12,39.24,34.26,36.27,35.07,36.31,34.06,32.78,33.81,35.21,34.95,38.65,34.46,32.88,32.93,34.81,34.05,33.76,33.17,34.8,34.04,36.65,36.65,35.34,33.53,34.68,32.97,33.02,39.55,53.33,113.2,33.68,34.62,42.62,36.67,36.79,36.54,44.35,44.66,36.61,32.47,33.18,34.24,30.4,32.79,35.37,32.78,33.4,33.61,32.52,33.35,35.94],"rps":[1,1,1,1,2,2,2,2,3,3,2.5,3.5,4,4,3.5,4.5,5,4.5,5,5,5,4.5,5,5,4.5,5,5,5,5,4,5,5,5,4.5,5,5,4.5,5,5,5,4.5,5,5,5,4,5,5,5,4.5,5,5,4.5,5,5,4.5,4,4,4,3,3,3,3,3,3,3,2.5,1.5,2,2,0.5],"err":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"vus":[1,1,1,1,2,2,2,2,3,3,3,4,4,4,4,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,4,4,4,4,3,3,3,3,3,3,3,2,2,2,2]}</script>
+
+</body>
+</html>
