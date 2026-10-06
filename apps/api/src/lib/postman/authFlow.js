@@ -137,49 +137,181 @@ function buildPlaceholderToSlot() {
  *   pm.environment.set("token", pm.response.json().access_token)
  *   pm.environment.set("token", responseJson.data.token)
  */
-function extractCaptureStatements(scripts) {
-  if (!Array.isArray(scripts) || scripts.length === 0) return [];
-  const text = scripts.join('\n');
-  const captures = [];
+const JSON_ROOTS = new Set([
+  'res',
+  'response',
+  'json',
+  'j',
+  'body',
+  'jsonData',
+  'responseJson',
+  'responseData',
+  'r',
+]);
 
-  // pm.environment.set("name", expr) and pm.collectionVariables.set("name", expr)
-  const setRe = /pm\.(?:environment|collectionVariables|globals|variables)\.set\s*\(\s*["']([^"']+)["']\s*,\s*([^)]+)\)/g;
-  let m;
-  while ((m = setRe.exec(text)) !== null) {
-    const varName = m[1].trim();
-    const expr = m[2].trim();
+function stripScriptComments(text) {
+  return String(text || '')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/[^\n\r]*/g, '');
+}
 
-    // Try to translate the JS expression into a JSON dotted path on the body.
-    // Patterns we support:
-    //   json.access_token
-    //   responseJson.data.token
-    //   pm.response.json().access_token
-    //   res.json().data.session.token
-    //   jsonData.token
-    let path = null;
-    const dotChain =
-      expr.match(/(?:pm\.response\.json\(\)|response\.json\(\)|res\.json\(\)|jsonData|json|responseJson|body|res|response)\s*((?:\.\w+)+)/);
-    if (dotChain) {
-      path = dotChain[1].replace(/^\./, '').split('.').filter(Boolean);
-    } else {
-      // Common Postman shorthand after `const r = pm.response.json()` etc.
-      const aliasProp = expr.match(/^([a-zA-Z_]\w*)\.(\w+)/);
-      const alias = aliasProp ? aliasProp[1] : null;
-      const prop = aliasProp ? aliasProp[2] : null;
-      if (
-        alias &&
-        prop &&
-        /^(r|res|json|j|body|response|jsonData|responseJson)$/i.test(alias)
-      ) {
-        path = [prop];
+function aliasesBefore(text, pos) {
+  const slice = text.slice(0, pos);
+  const aliases = new Map();
+  const re = /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*([^;\n]+)/g;
+  let match;
+  while ((match = re.exec(slice)) !== null) {
+    const name = match[1];
+    const rhs = match[2].trim();
+    if (/^(?:pm\.response\.json\(\)|response\.json\(\)|res\.json\(\))$/.test(rhs)) {
+      aliases.set(name, []);
+      continue;
+    }
+    const prop = rhs.match(/^([A-Za-z_$][\w$]*)((?:\.\w+)+)$/);
+    if (!prop) continue;
+    const base = prop[1];
+    const rest = prop[2].replace(/^\./, '').split('.').filter(Boolean);
+    if (aliases.has(base)) aliases.set(name, aliases.get(base).concat(rest));
+    else if (JSON_ROOTS.has(base)) aliases.set(name, rest);
+  }
+  return aliases;
+}
+
+function pathFromCaptureExpr(expr, aliases) {
+  const text = String(expr || '').trim();
+  const direct = text.match(
+    /^(?:pm\.response\.json\(\)|response\.json\(\)|res\.json\(\))((?:\??\.\w+)+)/
+  );
+  if (direct) {
+    return direct[1].replace(/\?\./g, '.').replace(/^\./, '').split('.').filter(Boolean);
+  }
+  const ident = text.match(/^([A-Za-z_$][\w$]*)((?:\??\.\w+)*)/);
+  if (!ident) return null;
+  const base = ident[1];
+  const rest = ident[2]
+    ? ident[2].replace(/\?\./g, '.').replace(/^\./, '').split('.').filter(Boolean)
+    : [];
+  if (aliases.has(base)) {
+    const path = aliases.get(base).concat(rest);
+    return path.length > 0 ? path : null;
+  }
+  if (JSON_ROOTS.has(base)) return rest.length > 0 ? rest : null;
+  return null;
+}
+
+function splitAndTerms(cond) {
+  const parts = [];
+  let cur = '';
+  let quote = null;
+  for (let i = 0; i < cond.length; i += 1) {
+    const ch = cond[i];
+    if (quote) {
+      cur += ch;
+      if (ch === quote && cond[i - 1] !== '\\') quote = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      cur += ch;
+      continue;
+    }
+    if (ch === '&' && cond[i + 1] === '&') {
+      parts.push(cur.trim());
+      cur = '';
+      i += 1;
+      continue;
+    }
+    cur += ch;
+  }
+  if (cur.trim()) parts.push(cur.trim());
+  return parts;
+}
+
+function conditionAt(text, index, aliases) {
+  const ranges = [];
+  const re = /\bif\s*\(([\s\S]*?)\)\s*\{/g;
+  let match;
+  while ((match = re.exec(text)) !== null) {
+    const open = match.index + match[0].length - 1;
+    let depth = 0;
+    let end = open;
+    for (let i = open; i < text.length; i += 1) {
+      if (text[i] === '{') depth += 1;
+      else if (text[i] === '}') {
+        depth -= 1;
+        if (depth === 0) {
+          end = i;
+          break;
+        }
       }
     }
+    ranges.push({ cond: match[1], start: open, end });
+  }
+  const owner = ranges.filter((range) => index > range.start && index < range.end).pop();
+  if (!owner) return null;
+  const when = { all: [] };
+  for (const term of splitAndTerms(owner.cond)) {
+    const status = term.match(/^pm\.response\.(?:code|status)\s*===?\s*(\d+)$/);
+    if (status) {
+      when.status = Number(status[1]);
+      continue;
+    }
+    const equals = term.match(/^(.+?)\s*===?\s*(['"])([\s\S]*)\2$/);
+    if (equals) {
+      const path = pathFromCaptureExpr(equals[1].trim(), aliases);
+      if (!path) return { unsupported: true };
+      when.all.push({ path, equals: equals[3] });
+      continue;
+    }
+    const truthy = term.match(/^([A-Za-z_$][\w$]*(?:\.\w+)*)$/);
+    if (truthy) {
+      const path = pathFromCaptureExpr(truthy[1], aliases);
+      if (!path) return { unsupported: true };
+      when.all.push({ path, truthy: true });
+      continue;
+    }
+    return { unsupported: true };
+  }
+  return when;
+}
 
-    captures.push({ varName, path, source: 'pmScript' });
+function findEnvironmentSets(text) {
+  const out = [];
+  const re = /pm\.(environment|collectionVariables|globals|variables)\.set\s*\(\s*(['"])([^'"]+)\2\s*,\s*/g;
+  let match;
+  while ((match = re.exec(text)) !== null) {
+    let i = re.lastIndex;
+    let depth = 1;
+    let expr = '';
+    while (i < text.length && depth > 0) {
+      const ch = text[i];
+      if (ch === '(') depth += 1;
+      else if (ch === ')') depth -= 1;
+      if (depth > 0) expr += ch;
+      i += 1;
+    }
+    out.push({ varName: match[3].trim(), expr: expr.trim(), index: match.index });
+  }
+  return out;
+}
+
+function extractCaptureStatements(scripts) {
+  if (!Array.isArray(scripts) || scripts.length === 0) return [];
+  const text = stripScriptComments(scripts.join('\n'));
+  const captures = [];
+
+  for (const set of findEnvironmentSets(text)) {
+    const aliases = aliasesBefore(text, set.index);
+    const path = pathFromCaptureExpr(set.expr, aliases);
+    const when = conditionAt(text, set.index, aliases);
+    const rule = { varName: set.varName, path, source: 'pmScript' };
+    if (when) rule.when = when;
+    captures.push(rule);
   }
 
   // pm.response.headers.get('X-Token') -> tells us the response has a header
   const headerRe = /pm\.response\.headers\.get\s*\(\s*["']([^"']+)["']\s*\)/gi;
+  let m;
   while ((m = headerRe.exec(text)) !== null) {
     captures.push({ headerName: m[1].toLowerCase(), source: 'pmScript' });
   }
@@ -349,6 +481,7 @@ function buildAuthFlow(parsed) {
 
 module.exports = {
   buildAuthFlow,
+  extractCaptureStatements,
   collectRuntimeCapturedVarNames,
   TOKEN_KEYS,
   SESSION_KEYS,

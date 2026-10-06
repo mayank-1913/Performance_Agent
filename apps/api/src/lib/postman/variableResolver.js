@@ -235,15 +235,26 @@ function resolveVariables({
       value = item.value;
       originalName = item.originalName;
     } else {
-      // Not resolved by any source — but we still surface it in `entries`
-      // when it was explicitly referenced (or defined disabled/empty and
-      // therefore skipped in collapseSource). Prefer the runtime original
-      // name if any, then environment, then collection.
-      const anyItem =
-        runtimeList.find((i) => toEnvName(i.key) === envName) ||
-        environmentList.find((i) => toEnvName(i.key) === envName) ||
-        collectionList.find((i) => toEnvName(i.key) === envName);
-      if (anyItem) originalName = anyItem.key;
+      // Enabled empty values are real definitions. A non-empty collection
+      // value already won above when the environment value was empty.
+      // An enabled empty variable with no non-empty fallback resolves to "".
+      const envItem = environmentList.find((i) => i.enabled && toEnvName(i.key) === envName);
+      const colItem = collectionList.find((i) => i.enabled && toEnvName(i.key) === envName);
+      if (envItem) {
+        source = 'environment';
+        value = envItem.value == null ? '' : String(envItem.value);
+        originalName = envItem.key;
+      } else if (colItem) {
+        source = 'collection';
+        value = colItem.value == null ? '' : String(colItem.value);
+        originalName = colItem.key;
+      } else {
+        const anyItem =
+          runtimeList.find((i) => toEnvName(i.key) === envName) ||
+          environmentList.find((i) => toEnvName(i.key) === envName) ||
+          collectionList.find((i) => toEnvName(i.key) === envName);
+        if (anyItem) originalName = anyItem.key;
+      }
     }
 
     const resolved = source !== 'unresolved';
@@ -324,13 +335,103 @@ function extractEnvironmentVariables(rawEnvironment) {
   return Array.isArray(rawEnvironment.values) ? rawEnvironment.values : [];
 }
 
+const MAX_NESTED_DEPTH = 16;
+
+/**
+ * Expand nested {{placeholders}} inside an already-looked-up variable value.
+ * Dynamic {{$name}} values are generated via the existing dynamic-variable
+ * module (not frozen). Cycles and over-deep graphs become unresolved.
+ *
+ * @param {string} value
+ * @param {(name: string) => string|undefined|null} getRawValue
+ *        unexpanded value for a nested name, using caller precedence
+ * @param {{
+ *   seen?: Set<string>,
+ *   depth?: number,
+ *   dynamicCache?: Map<string, unknown>,
+ *   dynamicProvider?: object,
+ * }} [options]
+ */
+function expandNestedPlaceholders(value, getRawValue, options = {}) {
+  const { isDynamicVariable, resolveDynamicVariable } = require('./dynamicVariables');
+  const seen = options.seen || new Set();
+  const depth = options.depth || 0;
+  const dynamicCache = options.dynamicCache || null;
+  const dynamicProvider = options.dynamicProvider || {};
+  const unresolved = [];
+
+  if (value == null) return { value: '', unresolved, cyclic: false };
+  const text = String(value);
+  if (depth > MAX_NESTED_DEPTH) {
+    return { value: text, unresolved: unresolved.concat(['__MAX_DEPTH__']), cyclic: true };
+  }
+  if (!/\{\{/.test(text)) return { value: text, unresolved, cyclic: false };
+
+  const placeholderRe = /\{\{\s*([^}]+?)\s*\}\}/g;
+  const out = text.replace(placeholderRe, (match, rawName) => {
+    const name = String(rawName || '').trim();
+    if (!name) {
+      unresolved.push('');
+      return '__UNRESOLVED__';
+    }
+    if (seen.has(name)) {
+      unresolved.push(name);
+      return '__UNRESOLVED__' + name;
+    }
+    if (name.startsWith('$')) {
+      if (isDynamicVariable(name)) {
+        const resolved = resolveDynamicVariable(name, dynamicProvider, dynamicCache);
+        if (resolved.ok) return String(resolved.value);
+      }
+      unresolved.push(name);
+      return '__UNSUPPORTED_DYNAMIC__' + name;
+    }
+    const nestedRaw = typeof getRawValue === 'function' ? getRawValue(name) : undefined;
+    if (nestedRaw == null) {
+      unresolved.push(name);
+      return '__UNRESOLVED__' + name;
+    }
+    if (String(nestedRaw).length === 0) return '';
+    const nextSeen = new Set(seen);
+    nextSeen.add(name);
+    const nested = expandNestedPlaceholders(nestedRaw, getRawValue, {
+      seen: nextSeen,
+      depth: depth + 1,
+      dynamicCache,
+      dynamicProvider,
+    });
+    unresolved.push(...nested.unresolved);
+    return nested.value;
+  });
+
+  return { value: out, unresolved, cyclic: unresolved.length > 0 && seen.size > 0 };
+}
+
+/**
+ * Lookup helper: runtime > environment > collection, keyed by original Postman name.
+ */
+function lookupRawVariableValue(name, maps = {}) {
+  const { runtime = {}, environment = {}, collection = {} } = maps;
+  const has = (obj, key) => obj && Object.prototype.hasOwnProperty.call(obj, key);
+  if (has(runtime, name) && String(runtime[name]).length > 0) return String(runtime[name]);
+  if (has(environment, name) && String(environment[name]).length > 0) return String(environment[name]);
+  if (has(collection, name) && String(collection[name]).length > 0) return String(collection[name]);
+  if (has(environment, name)) return '';
+  if (has(collection, name)) return '';
+  if (has(runtime, name)) return '';
+  return undefined;
+}
+
 module.exports = {
   resolveVariables,
   publicResolution,
   extractCollectionVariables,
   extractEnvironmentVariables,
+  expandNestedPlaceholders,
+  lookupRawVariableValue,
   toEnvName,
   isSecretName,
   SECRET_KEY_RE,
   VAR_RE,
+  MAX_NESTED_DEPTH,
 };

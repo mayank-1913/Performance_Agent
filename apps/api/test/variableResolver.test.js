@@ -9,6 +9,8 @@ const {
   extractCollectionVariables,
   extractEnvironmentVariables,
   toEnvName,
+  expandNestedPlaceholders,
+  lookupRawVariableValue,
 } = require('../src/lib/postman/variableResolver');
 
 /* Helpers ---------------------------------------------------------------- */
@@ -296,4 +298,56 @@ test('toEnvName normalization matches the K6 generator convention', () => {
   assert.equal(toEnvName('api_key'), 'API_KEY');
   assert.equal(toEnvName('  spaced name  '), 'SPACED_NAME');
   assert.equal(toEnvName('ALREADY_UPPER'), 'ALREADY_UPPER');
+});
+
+test('existing direct environment variable resolution remains unchanged', () => {
+  const res = resolveVariables({
+    collectionVariables: null,
+    environmentVariables: envValues({ baseUrl: 'https://env.example.com' }),
+    referencedVars: ['baseUrl'],
+  });
+  assert.equal(res.values.BASE_URL, 'https://env.example.com');
+  assert.equal(res.sources.BASE_URL, 'environment');
+  assert.deepEqual(res.unresolved, []);
+});
+
+test('environment value containing nested {{variable}} resolves correctly', () => {
+  const environment = {
+    email: 'testuser+{{idSuffix}}@example.com',
+    idSuffix: '42',
+  };
+  const got = expandNestedPlaceholders(environment.email, (name) =>
+    lookupRawVariableValue(name, { environment })
+  );
+  assert.equal(got.value, 'testuser+42@example.com');
+  assert.deepEqual(got.unresolved, []);
+});
+
+test('environment value containing a dynamic variable resolves at request execution time', () => {
+  const cache = new Map();
+  const environment = { username: 'user_{{$randomUserName}}' };
+  const first = expandNestedPlaceholders(
+    environment.username,
+    (name) => lookupRawVariableValue(name, { environment }),
+    { dynamicCache: cache, dynamicProvider: { random: () => 0.1, uuid: () => 'uuid-1' } }
+  );
+  const second = expandNestedPlaceholders(
+    environment.username,
+    (name) => lookupRawVariableValue(name, { environment }),
+    { dynamicCache: cache, dynamicProvider: { random: () => 0.9, uuid: () => 'uuid-2' } }
+  );
+  assert.match(first.value, /^user_/);
+  assert.equal(first.value, second.value, 'same request cache must reuse the dynamic value');
+  assert.ok(!first.value.includes('{{$randomUserName}}'));
+});
+
+test('recursive/cyclic variable references do not loop forever', () => {
+  const environment = { ping: 'x{{pong}}', pong: 'y{{ping}}' };
+  const started = Date.now();
+  const got = expandNestedPlaceholders(environment.ping, (name) =>
+    lookupRawVariableValue(name, { environment })
+  );
+  assert.ok(Date.now() - started < 1000);
+  assert.match(got.value, /__UNRESOLVED__/);
+  assert.ok(got.unresolved.length > 0);
 });

@@ -55,6 +55,10 @@ function buildAuthStateAccessorBlock(authSessionMode, credentialReuse) {
     ``,
     `function __getAuthState(data) {`,
     `  if (AUTH_SESSION_MODE !== 'PER_VU_LOGIN') return data || {};`,
+    `  // Fall back safely when the generator emitted PER_VU_LOGIN mode but`,
+    `  // the collection has no login request (no __ensureVuLogin block was`,
+    `  // emitted). The runtime must not throw ReferenceError.`,
+    `  if (typeof __ensureVuLogin !== 'function') return data || {};`,
     `  return __ensureVuLogin();`,
     `}`,
   ].join('\n');

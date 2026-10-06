@@ -120,7 +120,13 @@ function __resolveDynamicVar(name, cache) {
       break;
     case '$guid':
     case '$randomUUID':
-      value = (__crypto && __crypto.randomUUID) ? __crypto.randomUUID() : String(Date.now()) + '-' + String(Math.random()).slice(2);
+      // k6 v0.52+ exposes WebCrypto globally as 'crypto'. Fall back to a
+      // Date+Math-based identifier when the host runtime lacks it. The
+      // bare-identifier form that was here previously threw ReferenceError
+      // in k6 (unresolved identifiers do NOT coerce to undefined).
+      value = (typeof crypto !== 'undefined' && crypto && typeof crypto.randomUUID === 'function')
+        ? crypto.randomUUID()
+        : (String(Date.now()) + '-' + String(Math.random()).slice(2));
       break;
     case '$randomInt':
       value = Math.floor(Math.random() * 1001);

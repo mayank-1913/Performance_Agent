@@ -50,6 +50,7 @@ const { normalizeRequestVariables, REQUEST_LOCAL_RUNTIME_JS } = require('../post
 const { isJsonRawBody, buildJsonAwareRawBody } = require('../postman/jsonBodyCodegen');
 const { analyzePrerequestScript, emitPrerequestBlock, PREREQUEST_RUNTIME_JS } = require('../postman/prerequestCodegen');
 const { analyzeRequestVariables, UNRESOLVED_SAFETY_RUNTIME_JS } = require('../postman/unresolvedSafety');
+const { encodeQueryLiteral, encodePathLiteral } = require('../postman/parser');
 
 const TOKEN_REROUTE_DEFAULT = new Set([
   'AUTH_TOKEN',
@@ -120,6 +121,47 @@ function escapeForTemplateLiteral(str) {
     .replace(/\$\{/g, '\\${');
 }
 
+/**
+ * Query values and path segments that still contain {{placeholders}} are
+ * encoded only after those placeholders resolve. The host/prefix is not
+ * passed through here, so a base URL variable keeps its scheme and slashes.
+ */
+function renderEncodedSpan(text, kind, interp) {
+  const encodeLiteral = kind === 'path' ? encodePathLiteral : encodeQueryLiteral;
+  let out = '';
+  let last = 0;
+  VAR_RE.lastIndex = 0;
+  let m;
+  while ((m = VAR_RE.exec(text)) !== null) {
+    out += escapeForTemplateLiteral(encodeLiteral(text.slice(last, m.index)));
+    const original = m[1].trim();
+    const wrapped = interp.exprForPlaceholder(original);
+    const inner =
+      wrapped.startsWith('${') && wrapped.endsWith('}') ? wrapped.slice(2, -1) : wrapped;
+    out += '${encodeURIComponent(' + inner + ')}';
+    last = m.index + m[0].length;
+  }
+  out += escapeForTemplateLiteral(encodeLiteral(text.slice(last)));
+  VAR_RE.lastIndex = 0;
+  return out;
+}
+
+function renderUrlTemplate(url, spans, interp) {
+  const input = url == null ? '' : String(url);
+  if (!Array.isArray(spans) || spans.length === 0) return interp.asTemplate(input);
+  let out = '';
+  let cursor = 0;
+  for (const span of spans) {
+    const start = span && Number.isInteger(span.start) ? span.start : cursor;
+    const end = span && Number.isInteger(span.end) ? span.end : start;
+    out += interp.asTemplate(input.slice(cursor, start));
+    out += renderEncodedSpan(input.slice(start, end), span.kind, interp);
+    cursor = end;
+  }
+  out += interp.asTemplate(input.slice(cursor));
+  return out;
+}
+
 function escapeJsonInDouble(str) {
   return String(str ?? '')
     .replace(/\\/g, '\\\\')
@@ -155,24 +197,40 @@ function makeInterpolator({
   requestIndex = -1,
   requestLocals = null,
   prerequestSets = null,
+  prerequestLocalSets = null,
+  useCompiledVars = false,
 }) {
   const reroute = tokenReroute || new Set();
   const captured = capturedVarNames || new Set();
   const st = stateRef || 'data';
   const locals = requestLocals || new Map();
   const pmSets = prerequestSets || new Set();
+  const pmLocalSets = prerequestLocalSets || new Set();
   const reqIdx = requestIndex;
+  const compiledVarCall = (original) =>
+    '__getCompiledVar(' + JSON.stringify(original) + (reqIdx >= 0 ? `, __dynCache_${reqIdx}` : ', {}') + ')';
 
   function buildSources(envName, originalName, isCaptured, safeOriginal) {
     const sources = [];
     if (isDynamicVariable(originalName)) {
-      sources.push(`__resolveDynamicVar(${JSON.stringify(originalName)}, __dynCache_${reqIdx})`);
+      // When this interpolator is used OUTSIDE a request block (e.g. the
+      // PER_VU_LOGIN login call emitted via buildEnsureVuLoginBlock),
+      // reqIdx is -1 and no __dynCache_<N> binding exists in scope. We
+      // must emit an empty-object literal in that case or the generated
+      // script throws ReferenceError at runtime.
+      const dynCacheArg = reqIdx >= 0 ? `__dynCache_${reqIdx}` : '{}';
+      sources.push(`__resolveDynamicVar(${JSON.stringify(originalName)}, ${dynCacheArg})`);
       return sources;
     }
     sources.push('__ENV.' + envName);
+    if (pmLocalSets.has(originalName) && reqIdx >= 0) {
+      sources.push('__getRequestLocal(' + st + ', ' + reqIdx + ', ' + JSON.stringify(originalName) + ')');
+    }
     if (pmSets.has(originalName)) {
       sources.push('__getPmVar(' + st + ', \'environment\', ' + JSON.stringify(originalName) + ')');
-      sources.push('__getPmVar(' + st + ', \'variables\', ' + JSON.stringify(originalName) + ')');
+    }
+    if (pmLocalSets.has(originalName)) {
+      sources.push('__pmGet(' + st + ', \'variables\', ' + JSON.stringify(originalName) + ')');
     }
     if (locals.has(originalName)) {
       const entry = locals.get(originalName);
@@ -188,6 +246,11 @@ function makeInterpolator({
 
   function finalizeExpr(sources, originalName, { isToken = false } = {}) {
     const chain = sources.join(' || ');
+    const cacheArg = reqIdx >= 0 ? `__dynCache_${reqIdx}` : '{}';
+    if (useCompiledVars) {
+      const inner = isToken ? '(' + chain + " || '')" : chain;
+      return '${__expandNestedVars(' + JSON.stringify(originalName) + ', ' + inner + ', ' + cacheArg + ')}';
+    }
     if (isToken) return '${(' + chain + " || '')}";
     return '${__coalesceVar(' + JSON.stringify(originalName) + ', ' + chain + ')}';
   }
@@ -234,6 +297,7 @@ function makeInterpolator({
       if (runtimeEnabled && slotChain) sources.push(slotChain.replace(/^ \|\| /, ''));
       if (runtimeEnabled && isCaptured) sources.push(st + '.vars["' + safeOriginal + '"]');
       if (envName !== 'AUTH_TOKEN') sources.push('__ENV.' + envName);
+      if (useCompiledVars) sources.push(compiledVarCall(originalName));
       return finalizeExpr(sources, originalName, { isToken: true });
     }
     if (runtimeEnabled && reroute.has(envName)) {
@@ -241,14 +305,20 @@ function makeInterpolator({
       // gets the runtime slot fallback, but no AUTH_TOKEN override —
       // SESSION_ID is a different slot.
       const slot = PLACEHOLDER_TO_SLOT.get(envName) || envName;
-      return '${(__ENV.' + envName + ' || ' + st + '.' + slot + " || '')}";
+      const compiled = useCompiledVars ? ' || ' + compiledVarCall(originalName) : '';
+      if (useCompiledVars) {
+        return '${__expandNestedVars(' + JSON.stringify(originalName) + ', (__ENV.' + envName + compiled + ' || ' + st + '.' + slot + " || ''), " + (reqIdx >= 0 ? `__dynCache_${reqIdx}` : '{}') + ')}';
+      }
+      return '${(__ENV.' + envName + compiled + ' || ' + st + '.' + slot + " || '')}";
     }
     if (isCaptured) {
       const sources = buildSources(envName, originalName, true, safeOriginal);
       sources.push(st + '.vars["' + safeOriginal + '"]');
+      if (useCompiledVars) sources.push(compiledVarCall(originalName));
       return finalizeExpr(sources, originalName);
     }
     const sources = buildSources(envName, originalName, false, safeOriginal);
+    if (useCompiledVars) sources.push(compiledVarCall(originalName));
     return finalizeExpr(sources, originalName);
   }
 
@@ -319,7 +389,7 @@ function inferDefaultContentType(body) {
   return null;
 }
 
-function buildHeadersBlock(headers, { injectAuthToken, interp, runtimeEnabled, body = null }) {
+function buildHeadersBlock(headers, { injectAuthToken, interp, runtimeEnabled, body = null, multipartContentTypeExpr = null }) {
   const authIndex = headers.findIndex(
     (h) => typeof h.key === 'string' && h.key.toLowerCase() === 'authorization'
   );
@@ -400,9 +470,13 @@ function buildHeadersBlock(headers, { injectAuthToken, interp, runtimeEnabled, b
   }
 
   if (!hasContentType) {
-    const inferred = inferDefaultContentType(body);
-    if (inferred) {
-      lines.push(`      "Content-Type": ${JSON.stringify(inferred)}`);
+    if (multipartContentTypeExpr) {
+      lines.push(`      "Content-Type": ${multipartContentTypeExpr}`);
+    } else {
+      const inferred = inferDefaultContentType(body);
+      if (inferred) {
+        lines.push(`      "Content-Type": ${JSON.stringify(inferred)}`);
+      }
     }
   }
 
@@ -412,8 +486,14 @@ function buildHeadersBlock(headers, { injectAuthToken, interp, runtimeEnabled, b
   return `    headers: {\n${lines.join(',\n')}\n    }`;
 }
 
-function buildBodyExpression(body, { interp, redactCredentials = false }) {
+function buildBodyExpression(body, { interp, redactCredentials = false, fileAssetsOk = true, fileHandles = null }) {
   if (!body) return null;
+  if (body.mode === 'file' || body.mode === 'binary') {
+    if (fileHandles && fileHandles.__body) {
+      return `http.file(${fileHandles.__body}, ${JSON.stringify(basenameFromSrc(body.src))})`;
+    }
+    return null;
+  }
   switch (body.mode) {
     case 'raw': {
       const raw = redactCredentials ? redactLoginCredentials(body.raw || '') : body.raw || '';
@@ -439,17 +519,26 @@ function buildBodyExpression(body, { interp, redactCredentials = false }) {
       return `{\n${obj}\n    }`;
     }
     case 'formdata': {
-      const obj = body.params
-        .map(
-          (p) => {
-            const envName = credentialEnvName(p.key);
-            const value = redactCredentials && envName && typeof p.value === 'string' && !/\{\{[^}]+\}\}/.test(p.value)
-              ? `{{${envName}}}`
-              : p.value;
-            return `      "${escapeJsonInDouble(p.key)}": \`${interp.asTemplate(value)}\``;
+      const params = body.params || [];
+      const fileParams = params.filter((p) => p && p.type === 'file');
+      if (fileParams.length > 0 && !fileAssetsOk) {
+        return null;
+      }
+      const obj = params
+        .map((p) => {
+          if (p && p.type === 'file') {
+            if (!fileHandles || !fileHandles[p.key]) return null;
+            return `      "${escapeJsonInDouble(p.key)}": http.file(${fileHandles[p.key]}, ${JSON.stringify(basenameFromSrc(p.src))})`;
           }
-        )
+          const envName = credentialEnvName(p.key);
+          const value = redactCredentials && envName && typeof p.value === 'string' && !/\{\{[^}]+\}\}/.test(p.value)
+            ? `{{${envName}}}`
+            : p.value;
+          return `      "${escapeJsonInDouble(p.key)}": \`${interp.asTemplate(value)}\``;
+        })
+        .filter(Boolean)
         .join(',\n');
+      if (!obj) return null;
       return `{\n${obj}\n    }`;
     }
     case 'graphql': {
@@ -460,6 +549,30 @@ function buildBodyExpression(body, { interp, redactCredentials = false }) {
     default:
       return null;
   }
+}
+
+function fileAssetIdent(requestIndex, field) {
+  const safe = String(field == null ? 'body' : field).replace(/[^A-Za-z0-9]+/g, '_') || 'body';
+  return `__fileAsset_${requestIndex}_${safe}`;
+}
+
+function basenameFromSrc(src) {
+  const s = String(src || '');
+  const parts = s.split(/[/\\]/);
+  return parts[parts.length - 1] || 'upload.bin';
+}
+
+function buildFileAssetConstants(executionModel) {
+  if (!executionModel || !Array.isArray(executionModel.requests)) return '';
+  const lines = [];
+  for (const req of executionModel.requests) {
+    for (const asset of req.assets || []) {
+      if (!asset.available || !asset.src) continue;
+      const ident = fileAssetIdent(req.index, asset.field);
+      lines.push(`const ${ident} = open(${JSON.stringify(asset.src)}, 'b');`);
+    }
+  }
+  return lines.join('\n');
 }
 
 function methodCall(method) {
@@ -574,6 +687,9 @@ function buildRequestBlock(req, options, ctx = {}) {
   const urlVar = `__url_${emitIndex}`;
   const bodyVar = `__body_${emitIndex}`;
   const dynCacheVar = `__dynCache_${emitIndex}`;
+  const redactCredentials = options.redactCredentials !== false;
+  const fileAssetsOk = options.fileAssetsOk !== false;
+  const fileHandles = options.fileHandles || null;
 
   const prerequestBlock = ctx.prerequestBlock || '';
   const prerequestPrefix = prerequestBlock
@@ -584,19 +700,56 @@ function buildRequestBlock(req, options, ctx = {}) {
       ].join('\n')
     : `    const ${dynCacheVar} = {};`;
 
-  const url = `\`${interp.asTemplate(req.url)}\``;
+  const ppb = req.protocolProfileBehavior && typeof req.protocolProfileBehavior === 'object'
+    ? req.protocolProfileBehavior
+    : {};
+  const methodName = String(req.method || 'GET').toUpperCase();
+  const keepBodyOnGet = ppb.disableBodyPruning === true;
+  const prunedGet = !keepBodyOnGet && (methodName === 'GET' || methodName === 'HEAD');
+  const formParams = req.body && req.body.mode === 'formdata' ? (req.body.params || []) : [];
+  const formFiles = formParams.filter((p) => p && p.type === 'file');
+  const textOnlyForm = !!(req.body && req.body.mode === 'formdata' && formFiles.length === 0 && formParams.length > 0 && !prunedGet);
+  const mpVar = `__mp_${emitIndex}`;
+  let multipartDecl = '';
+  let multipartContentTypeExpr = null;
+  let bodyExpr = null;
+  if (textOnlyForm) {
+    const fields = formParams.map((p) => {
+      const value = interp.asTemplate(p.value == null ? '' : String(p.value));
+      return `{ name: ${JSON.stringify(String(p.key || ''))}, value: \`${value}\` }`;
+    }).join(', ');
+    multipartDecl = `    const ${mpVar} = __encodeTextMultipart([${fields}]);`;
+    multipartContentTypeExpr = `${mpVar}.contentType`;
+    bodyExpr = `${mpVar}.body`;
+  } else if (!prunedGet) {
+    bodyExpr = buildBodyExpression(req.body, {
+      interp,
+      redactCredentials,
+      fileAssetsOk,
+      fileHandles,
+    });
+  }
+  const headerBody = textOnlyForm || prunedGet ? null : req.body;
+  const url = `\`${renderUrlTemplate(req.url, req.urlEncodeSpans, interp)}\``;
   const headersBlock = buildHeadersBlock(req.headers, {
     injectAuthToken,
     interp,
     runtimeEnabled,
-    body: req.body,
+    body: headerBody,
+    multipartContentTypeExpr,
   });
   const authHeader = (req.headers || []).find(
     (h) => typeof h?.key === 'string' && h.key.toLowerCase() === 'authorization'
   );
   const authFallback = authHeader ? interp.asTemplate(authHeader.value) : '';
-  const bodyExpr = buildBodyExpression(req.body, { interp, redactCredentials: true });
   const verb = methodCall(req.method);
+  const protocolNotes = [];
+  if (ppb.strictSSL === false) {
+    protocolNotes.push('    // protocolProfileBehavior.strictSSL=false: per-request TLS verification bypass is not supported by k6');
+  }
+  if (Object.prototype.hasOwnProperty.call(ppb, 'followAuthorizationHeader')) {
+    protocolNotes.push('    // protocolProfileBehavior.followAuthorizationHeader is not supported per request by k6');
+  }
 
   const tags = buildRequestTags(req, emitIndex, totalRequests);
   const tagLiteral = stringifyTagObject(tags);
@@ -619,6 +772,33 @@ function buildRequestBlock(req, options, ctx = {}) {
   const groupHeader = `  group(\`${escapeForTemplateLiteral(label)}\`, () => {`;
   const tagsDecl = `    const ${tagsVar} = __defaultTags(${tagLiteral});`;
   const skipPrefix = JSON.stringify(`[skip] ${label}: `);
+  const originalIndex =
+    typeof ctx.originalIndex === 'number' ? ctx.originalIndex : emitIndex;
+  const selectionGuard =
+    ctx.useRuntimeSelection === true
+      ? [
+          `    if (typeof __shouldExecuteRequest === 'function' && !__shouldExecuteRequest(${originalIndex})) {`,
+          `      return;`,
+          `    }`,
+        ].join('\n')
+      : '';
+  const preGuard = ctx.prerequestUnsupported === true
+    ? [
+        `    __dependencySkipped.add(1, ${tagsVar});`,
+        `    console.warn(${skipPrefix} + 'pre_request_unsupported');`,
+        `    return;`,
+      ].join('\n')
+    : '';
+  const assetGuard =
+    Array.isArray(ctx.requiredRuntimeAssets) && ctx.requiredRuntimeAssets.length > 0
+      ? [
+          `    __dependencySkipped.add(1, ${tagsVar});`,
+          `    console.warn(${skipPrefix} + ${JSON.stringify(
+            'required runtime file asset is unavailable; request was not converted to a misleading body'
+          )});`,
+          `    return;`,
+        ].join('\n')
+      : '';
   const depGuard = dependencyDeps.length > 0
     ? [
         `    const ${depVar} = __checkDependencyDeps(data, ${JSON.stringify(dependencyDeps)});`,
@@ -650,7 +830,9 @@ function buildRequestBlock(req, options, ctx = {}) {
     : '';
 
   let call;
-  if (verb && verb !== 'get' && verb !== 'head' && verb !== 'options' && bodyExpr) {
+  if (keepBodyOnGet && (verb === 'get' || verb === 'head') && bodyExpr) {
+    call = `    const res = http.request(\n      ${JSON.stringify(methodName)},\n      ${urlVar},\n      ${bodyVar},\n      ${params}\n    );`;
+  } else if (verb && verb !== 'get' && verb !== 'head' && verb !== 'options' && bodyExpr) {
     call = `    const res = http.${verb}(\n      ${urlVar},\n      ${bodyVar},\n      ${params}\n    );`;
   } else if ((verb === 'del' || verb === 'put' || verb === 'patch') && !bodyExpr) {
     call = `    const res = http.${verb}(
@@ -698,7 +880,7 @@ function buildRequestBlock(req, options, ctx = {}) {
     .filter(Boolean)
     .join('\n');
 
-  return `${groupHeader}\n${tagsDecl}\n${depGuard}\n${prerequestPrefix}\n${urlGuard}\n${bodyGuard}\n${call}\n${checks}\n`;
+  return `${groupHeader}\n${protocolNotes.join('\n')}${protocolNotes.length ? '\n' : ''}${tagsDecl}\n${selectionGuard}\n${preGuard}\n${assetGuard}\n${depGuard}\n${prerequestPrefix}\n${multipartDecl ? multipartDecl + '\n' : ''}${urlGuard}\n${bodyGuard}\n${call}\n${checks}\n`;
 }
 
 /**
@@ -722,7 +904,11 @@ function __isRuntimeVarAvailable(state, varName) {
     if (!/\\{\\{[^}]+\\}\\}/.test(envVal)) return true;
   }
   const captured = state && state.vars && state.vars[varName];
-  if (typeof captured === 'string' && captured.length > 0) return true;
+  if (captured != null && String(captured).length > 0) return true;
+  if (typeof __getCompiledVar === 'function') {
+    const compiled = __getCompiledVar(varName);
+    if (typeof compiled === 'string' && compiled.length > 0) return true;
+  }
   // PER_VU_LOGIN captures tokens into AUTH_TOKEN/ACCESS_TOKEN slots via
   // deepFind when pm.environment.set paths are not statically parseable.
   // Dependency guards must treat those slots as satisfying token-shaped vars
@@ -813,6 +999,46 @@ function __pace() {
   if (PACING_MS > 0) sleep(PACING_MS / 1000);
 }
 
+function __valueAtPath(body, path) {
+  let cur = body;
+  const segments = Array.isArray(path) ? path : [];
+  for (const segment of segments) {
+    if (cur == null || typeof cur !== 'object') return undefined;
+    cur = cur[segment];
+  }
+  return cur;
+}
+
+function __captureRuleAllows(rule, body, res) {
+  if (!rule || !rule.when) return true;
+  const when = rule.when;
+  if (when.unsupported) return false;
+  if (when.status != null && (!res || res.status !== when.status)) return false;
+  if (Array.isArray(when.all)) {
+    for (const term of when.all) {
+      const value = __valueAtPath(body, term.path);
+      if (term.equals != null && value !== term.equals) return false;
+      if (term.truthy && (value == null || value === '' || value === false || value === 0)) return false;
+    }
+  }
+  return true;
+}
+
+function __encodeTextMultipart(fields) {
+  const boundary = '----k6FormBoundary' + Math.floor(Math.random() * 1e12).toString(16);
+  let body = '';
+  const list = Array.isArray(fields) ? fields : [];
+  for (const field of list) {
+    const name = String(field && field.name != null ? field.name : '').replace(/"/g, '%22');
+    const value = field && field.value != null ? String(field.value) : '';
+    body += '--' + boundary + '\\r\\n';
+    body += 'Content-Disposition: form-data; name="' + name + '"\\r\\n\\r\\n';
+    body += value + '\\r\\n';
+  }
+  body += '--' + boundary + '--\\r\\n';
+  return { body: body, contentType: 'multipart/form-data; boundary=' + boundary };
+}
+
 function __captureResponseVars(res, data, rules) {
   if (!res || !Array.isArray(rules) || rules.length === 0) return;
   const state = __getAuthState(data);
@@ -821,13 +1047,45 @@ function __captureResponseVars(res, data, rules) {
   try { body = res.json(); } catch (e) { body = null; }
   for (const rule of rules) {
     if (!rule || !rule.varName || !Array.isArray(rule.path)) continue;
-    let value = body;
-    for (const segment of rule.path) {
-      if (value == null || typeof value !== 'object') { value = null; break; }
-      value = value[segment];
-    }
+    if (!__captureRuleAllows(rule, body, res)) continue;
+    const value = __valueAtPath(body, rule.path);
+    if (value == null) continue;
     if (typeof value === 'string' && value.length > 0) state.vars[rule.varName] = value;
+    else if (typeof value === 'number' && Number.isFinite(value)) state.vars[rule.varName] = String(value);
+    else if (typeof value === 'boolean') state.vars[rule.varName] = String(value);
   }
+}
+
+function __firstRequestIndexByName(name) {
+  const wanted = String(name || '');
+  for (let i = 0; i < __REQUEST_NAMES.length; i += 1) {
+    if (__REQUEST_NAMES[i] === wanted) return i;
+  }
+  return -1;
+}
+
+function __commitScheduledNext(state) {
+  if (!state || !state.__scheduledNext) return;
+  const scheduled = state.__scheduledNext;
+  state.__scheduledNext = null;
+  if (scheduled.stop) {
+    state.__stopRun = true;
+    return;
+  }
+  const idx = __firstRequestIndexByName(scheduled.name);
+  if (idx < 0) {
+    const message = 'setNextRequest target not found: ' + scheduled.name;
+    state.__nextRequestError = message;
+    console.warn('[compat] ' + message);
+    return;
+  }
+  if (__EXECUTABLE_INDICES.indexOf(idx) < 0) {
+    const message = 'setNextRequest target is outside the selected execution closure: ' + scheduled.name;
+    state.__nextRequestError = message;
+    console.warn('[compat] ' + message);
+    return;
+  }
+  state.__jumpTo = idx;
 }
 `;
 
@@ -1085,15 +1343,15 @@ ${MANUAL_OVERRIDE_BRANCH_JS}
  * Build the runtime extraction logic for setup(). Emitted as a string so the
  * generator remains deterministic (no template engine).
  */
-function buildSetupBlock({ login, interp, authFlow }) {
-  const url = `\`${interp.asTemplate(login.url)}\``;
+function buildSetupBlock({ login, interp, authFlow, redactCredentials = true }) {
+  const url = `\`${renderUrlTemplate(login.url, login.urlEncodeSpans, interp)}\``;
   const headersBlock = buildHeadersBlock(login.headers || [], {
     injectAuthToken: false,
     interp,
     runtimeEnabled: false, // login itself never reads from the runtime
   });
   const params = `{\n${headersBlock}\n  }`;
-  const bodyExpr = buildBodyExpression(login.body, { interp, redactCredentials: true });
+  const bodyExpr = buildBodyExpression(login.body, { interp, redactCredentials });
   const verb = methodCall(login.method) || 'request';
 
   let call;
@@ -1128,7 +1386,7 @@ function buildSetupBlock({ login, interp, authFlow }) {
     call,
     `  const state = {`,
     `    AUTH_TOKEN: '', ACCESS_TOKEN: '', JWT: '', ID_TOKEN: '', SESSION_ID: '',`,
-    `    cookies: [], vars: {},`,
+    `    cookies: [], vars: Object.assign({}, __COMPILED_COLLECTION_VARS, __COMPILED_ENVIRONMENT_VARS),`,
     `  };`,
     `  if (res.status < 200 || res.status >= 300) {`,
     `    console.warn('[auth] login failed: status=' + res.status + ' (manual __ENV fallback active)');`,
@@ -1167,7 +1425,7 @@ function buildSetupBlock({ login, interp, authFlow }) {
     ``,
     `  // 1) Honor explicit pm.environment.set(...) capture statements first.`,
     `  for (const rule of captureRules) {`,
-    `    if (rule.path && rule.varName) {`,
+    `    if (rule.path && rule.varName && __captureRuleAllows(rule, body, res)) {`,
     `      const v = resolvePath(body, rule.path);`,
     `      if (v) state.vars[rule.varName] = v;`,
     `    }`,
@@ -1267,6 +1525,10 @@ function buildSetupBlock({ login, interp, authFlow }) {
  */
 function generateK6Script(parsed, options = {}) {
   const { injectAuthToken = false } = options;
+  const executionModel = options.executionModel || null;
+  const useCompiledVars = !!executionModel;
+  const compiledCollectionVars = executionModel?.compiledCollectionVars || {};
+  const compiledEnvironmentVars = executionModel?.compiledEnvironmentVars || {};
   // Phase 6: workload profile is the authoritative source for scenarios,
   // executor, and thresholds. If the caller supplied a legacy loadProfile
   // it is routed into the 'custom' profile by normalizeWorkload so the
@@ -1279,7 +1541,7 @@ function generateK6Script(parsed, options = {}) {
       ? normalizeWorkload(options.workload)
       : normalizeWorkload(options.loadProfile || null);
   const profile = workload.loadProfile;
-  const authFlow = options.authFlow || { enabled: false };
+  const authFlow = options.authFlow || executionModel?.authFlow || { enabled: false };
   const authSessionMode =
     options.authSessionMode || workload.authSessionMode || null;
   const credentialReuse =
@@ -1302,12 +1564,14 @@ function generateK6Script(parsed, options = {}) {
     runtimeEnabled,
     capturedVarNames,
     stateRef,
+    useCompiledVars,
   });
   const credentialInterp = makeInterpolator({
     tokenReroute,
     runtimeEnabled: false,
     capturedVarNames,
     perVuCredentials: true,
+    useCompiledVars,
   });
 
   const vars = collectVarSet(parsed);
@@ -1360,10 +1624,14 @@ function generateK6Script(parsed, options = {}) {
           authFlow.loginRequest?.url || ''
         } -> token injected into ${authFlow.injectionCount || 0} request(s)`
       : `// Auth flow:     none detected`,
-    `//`,
-    `// All variables are read from K6 environment via __ENV. Pass them at runtime:`,
-    `//   k6 run -e BASE_URL=https://api.example.com -e AUTH_TOKEN=xxxxx script.js`,
-    `// Auth tokens are NEVER hardcoded.`,
+    executionModel
+      ? `// Compiler:      self-contained Postman runtime model (collection${
+          executionModel.environmentProvided ? ' + environment' : ' only'
+        }; ${parsed.requests.length} requests, ${executionModel.selectedIndices.length} selected, ${executionModel.executableIndices.length} executable)`
+      : `//`,
+    executionModel
+      ? `// Compiled collection/environment values are embedded. __ENV remains a runtime override.`
+      : `// All variables are read from K6 environment via __ENV. Pass them at runtime:\n//   k6 run -e BASE_URL=https://api.example.com -e AUTH_TOKEN=xxxxx script.js\n// Auth tokens are NEVER hardcoded.`,
     ``,
   ]
     .filter(Boolean)
@@ -1392,7 +1660,78 @@ function generateK6Script(parsed, options = {}) {
     `  const n = Number(raw);`,
     `  return Number.isFinite(n) && n >= 0 ? n : 1000;`,
     `})();`,
-  ].join('\n');
+    `const __COMPILED_COLLECTION_VARS = ${JSON.stringify(compiledCollectionVars)};`,
+    `const __COMPILED_ENVIRONMENT_VARS = ${JSON.stringify(compiledEnvironmentVars)};`,
+    `const __DEFINED_VAR_NAMES = ${JSON.stringify(Object.fromEntries((executionModel?.definedVariableNames || Object.keys(parsed.definedVars || {})).map((name) => [name, true])))};`,
+    `const __REQUEST_NAMES = ${JSON.stringify((parsed.requests || []).map((req) => req.name || ''))};`,
+    `const __SELECTED_INDICES = ${JSON.stringify(executionModel ? executionModel.selectedIndices : parsed.requests.map((_, i) => i))};`,
+    `const __EXECUTABLE_INDICES = ${JSON.stringify(executionModel ? executionModel.executableIndices : parsed.requests.map((_, i) => i))};`,
+    `const __LOGIN_REQUEST_INDEX = ${JSON.stringify(authFlow.loginRequestIndex ?? -1)};`,
+    `function __compiledToEnvName(varName) {`,
+    `  return String(varName == null ? '' : varName).trim()`,
+    `    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')`,
+    `    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1_$2')`,
+    `    .replace(/[^A-Za-z0-9]+/g, '_')`,
+    `    .replace(/^_+|_+$/g, '')`,
+    `    .toUpperCase();`,
+    `}`,
+    `function __lookupCompiledRaw(name) {`,
+    `  const n = String(name || '');`,
+    `  if (Object.prototype.hasOwnProperty.call(__COMPILED_ENVIRONMENT_VARS, n)) {`,
+    `    const v = __COMPILED_ENVIRONMENT_VARS[n];`,
+    `    if (v != null && String(v).length > 0) return String(v);`,
+    `  }`,
+    `  if (Object.prototype.hasOwnProperty.call(__COMPILED_COLLECTION_VARS, n)) {`,
+    `    const v = __COMPILED_COLLECTION_VARS[n];`,
+    `    if (v != null && String(v).length > 0) return String(v);`,
+    `  }`,
+    `  return '';`,
+    `}`,
+    `function __getCompiledVar(name, cache, stack) {`,
+    `  const n = String(name || '');`,
+    `  if (!n) return '';`,
+    `  stack = stack || [];`,
+    `  if (stack.indexOf(n) !== -1) return '__UNRESOLVED__' + n;`,
+    `  if (stack.length >= 16) return '__UNRESOLVED__' + n;`,
+    `  if (n.charAt(0) === '$') {`,
+    `    return typeof __resolveDynamicVar === 'function' ? String(__resolveDynamicVar(n, cache || {}) || '') : '';`,
+    `  }`,
+    `  const envKey = __compiledToEnvName(n);`,
+    `  const envOverride = typeof __ENV !== 'undefined' ? __ENV[envKey] : '';`,
+    `  const raw = (typeof envOverride === 'string' && envOverride.length > 0) ? envOverride : __lookupCompiledRaw(n);`,
+    `  if (!raw) return __isDefinedVar(n) ? '' : '';`,
+    `  return __expandCompiledValue(raw, cache, stack.concat([n]));`,
+    `}`,
+    `function __isDefinedVar(name) {`,
+    `  return !!(__DEFINED_VAR_NAMES && Object.prototype.hasOwnProperty.call(__DEFINED_VAR_NAMES, name));`,
+    `}`,
+    `function __expandCompiledValue(raw, cache, stack) {`,
+    `  const text = String(raw);`,
+    `  if (text.indexOf('{{') === -1) return text;`,
+    `  return text.replace(/\\{\\{\\s*([^}]+?)\\s*\\}\\}/g, function (_m, inner) {`,
+    `    const key = String(inner || '').trim();`,
+    `    if (!key) return '__UNRESOLVED__';`,
+    `    const nested = __getCompiledVar(key, cache, stack);`,
+    `    if (nested == null || nested === '') return __isDefinedVar(key) ? '' : ('__UNRESOLVED__' + key);`,
+    `    return nested;`,
+    `  });`,
+    `}`,
+    `function __expandNestedVars(name, value, cache, stack) {`,
+    `  if (value == null || value === '' || value === 'undefined' || value === 'null') {`,
+    `    if ((value == null || value === '') && __isDefinedVar(name)) return '';`,
+    `    return __coalesceVar(name, value);`,
+    `  }`,
+    `  const text = String(value);`,
+    `  if (text.indexOf('{{') === -1) return text;`,
+    `  return __expandCompiledValue(text, cache, stack || [String(name || '')]);`,
+    `}`,
+    `function __shouldExecuteRequest(index) {`,
+    `  if (__EXECUTABLE_INDICES.indexOf(index) === -1) return false;`,
+    `  if (AUTH_STRATEGY === 'SETUP_LOGIN' && index === __LOGIN_REQUEST_INDEX) return false;`,
+    `  return true;`,
+    `}`,
+    buildFileAssetConstants(executionModel),
+  ].filter(Boolean).join('\n');
 
   // ── Sections 03 + 04: Load / Scenario config + Thresholds ────────────────
   // Phase 6: the generator no longer emits top-level `stages` — K6 rejects
@@ -1490,6 +1829,7 @@ function generateK6Script(parsed, options = {}) {
           login: authFlow.loginRequest,
           interp,
           authFlow,
+          redactCredentials: !executionModel,
         })
       : `// No setup() required for auth strategy ${authStrategy}.`;
 
@@ -1505,24 +1845,35 @@ function generateK6Script(parsed, options = {}) {
   // ── Section 10: Request Groups ──────────────────────────────────────────
   const injectSet = new Set(authFlow.injectionTargets || []);
   const { buildDependencyGraph } = require('../postman/dependencyGraph');
-  const dependencyGraph = buildDependencyGraph(parsed, authFlow);
-  // Filtered list preserves request order and drops the login request
-  // when it's already handled in setup().
+  const dependencyGraph =
+    executionModel?.dependencyGraph || buildDependencyGraph(parsed, authFlow);
+  for (const capturedName of dependencyGraph.runtimeCaptured || []) {
+    capturedVarNames.add(capturedName);
+  }
+  const includeAllRequests = !!executionModel;
   const filteredWithIndex = parsed.requests
-    .map((r, i) => ({ r, i, keep: !(runtimeEnabled && i === authFlow.loginRequestIndex) }))
+    .map((r, i) => ({
+      r,
+      i,
+      keep: includeAllRequests || !(runtimeEnabled && i === authFlow.loginRequestIndex),
+    }))
     .filter((x) => x.keep);
   const emittedTotal = filteredWithIndex.length;
-  const requestBlocks = filteredWithIndex
+  const requestPlans = filteredWithIndex
     .map(({ r, i }, emitIndex) => {
       const prerequestScript = (r.prerequests || []).join('\n');
       const prerequestAnalysis = analyzePrerequestScript(prerequestScript);
       const requestLocals = normalizeRequestVariables(r.requestVariables);
       const localSeed = buildRequestLocalSeed(r.requestVariables);
       const prerequestSets = new Set(prerequestAnalysis.setsEnvironment || []);
+      const prerequestLocalSets = new Set(prerequestAnalysis.setsVariables || []);
+      const definedNames = new Set(executionModel?.definedVariableNames || Object.keys(parsed.definedVars || {}));
       const varAnalysis = analyzeRequestVariables(r, {
         capturedVars: capturedVarNames,
         requestLocals,
         prerequestSets,
+        collectionVars: new Set([...Object.keys(compiledCollectionVars), ...definedNames]),
+        environmentVars: new Set([...Object.keys(compiledEnvironmentVars), ...definedNames]),
       });
       const requestInterp = makeInterpolator({
         tokenReroute,
@@ -1532,32 +1883,95 @@ function generateK6Script(parsed, options = {}) {
         requestIndex: emitIndex,
         requestLocals,
         prerequestSets,
+        prerequestLocalSets,
+        useCompiledVars,
       });
       const prerequestEmitted = emitPrerequestBlock(emitIndex, prerequestAnalysis, localSeed);
-      return buildRequestBlock(
+      const modelReq = executionModel?.requests?.[i];
+      const missingAssets = (modelReq?.assets || []).filter((a) => !a.available);
+      const fileHandles = {};
+      if (includeAllRequests && missingAssets.length === 0) {
+        for (const asset of modelReq?.assets || []) {
+          if (!asset.available || !asset.src) continue;
+          const ident = fileAssetIdent(i, asset.field);
+          if (asset.field) fileHandles[asset.field] = ident;
+          else fileHandles.__body = ident;
+        }
+      }
+      const injectThisRequest = includeAllRequests
+        ? injectAuthToken && injectSet.has(i)
+        : injectAuthToken;
+      const block = buildRequestBlock(
         r,
-        { injectAuthToken, interp: requestInterp, runtimeEnabled },
+        {
+          injectAuthToken: injectThisRequest,
+          interp: requestInterp,
+          runtimeEnabled,
+          redactCredentials: !includeAllRequests,
+          fileAssetsOk: missingAssets.length === 0,
+          fileHandles: Object.keys(fileHandles).length ? fileHandles : null,
+        },
         {
           injectsAuth: runtimeEnabled && injectSet.has(i),
           emitIndex,
+          originalIndex: i,
           totalRequests: emittedTotal,
           captureRules: (authFlow.requestCaptureRules || []).find((entry) => entry.index === i)?.rules || [],
           dependencyDeps: dependencyGraph.perRequest[i] || [],
           interp: requestInterp,
-          prerequestBlock: prerequestEmitted.block,
+          prerequestBlock: prerequestAnalysis.translatable ? prerequestEmitted.block : '',
+          prerequestUnsupported: !!(prerequestScript.trim() && !prerequestAnalysis.translatable),
+          schedulesNextRequest: prerequestAnalysis.schedulesNextRequest === true,
           varAnalysis,
+          useRuntimeSelection: includeAllRequests,
+          requiredRuntimeAssets: includeAllRequests ? missingAssets : [],
         }
       );
-    })
-    .join('\n');
+      return {
+        block,
+        originalIndex: i,
+        schedulesNextRequest: prerequestAnalysis.schedulesNextRequest === true,
+      };
+    });
+  const requestBlocks = requestPlans.map((plan) => plan.block).join('\n');
+  const needsNextRequest = requestPlans.some((plan) => plan.schedulesNextRequest);
+  const dispatchedBlocks = needsNextRequest
+    ? requestPlans.map((plan) => `    if (__i === ${plan.originalIndex}) {\n${plan.block.split('\n').map((line) => (line ? '  ' + line : line)).join('\n')}\n      __commitScheduledNext(data);\n    }`).join('\n')
+    : requestBlocks;
 
   // ── Section 13: Default Function ────────────────────────────────────────
-  const main = [
-    `export default function (data) {`,
-    `  data = data || {};`,
-    requestBlocks,
-    `}`,
-  ].join('\n');
+  const main = needsNextRequest
+    ? [
+        `export default function (data) {`,
+        `  data = data || {};`,
+        `  if (!data.vars) data.vars = Object.assign({}, __COMPILED_COLLECTION_VARS, __COMPILED_ENVIRONMENT_VARS);`,
+        `  const __seq = __EXECUTABLE_INDICES.slice();`,
+        `  let __pos = 0;`,
+        `  let __hops = 0;`,
+        `  const __hopLimit = Math.max(8, __seq.length * 8);`,
+        `  while (__pos < __seq.length && __hops < __hopLimit) {`,
+        `    __hops += 1;`,
+        `    const __i = __seq[__pos];`,
+        `    if (data.__stopRun) break;`,
+        dispatchedBlocks,
+        `    if (data.__stopRun) break;`,
+        `    if (data.__jumpTo != null) {`,
+        `      const __targetPos = __seq.indexOf(data.__jumpTo);`,
+        `      data.__jumpTo = null;`,
+        `      if (__targetPos >= 0) { __pos = __targetPos; continue; }`,
+        `    }`,
+        `    __pos += 1;`,
+        `  }`,
+        `  if (__hops >= __hopLimit) console.warn('[compat] setNextRequest hop limit reached');`,
+        `}`,
+      ].join('\n')
+    : [
+        `export default function (data) {`,
+        `  data = data || {};`,
+        `  if (!data.vars) data.vars = Object.assign({}, __COMPILED_COLLECTION_VARS, __COMPILED_ENVIRONMENT_VARS);`,
+        requestBlocks,
+        `}`,
+      ].join('\n');
 
   // ── Section 14: Mandatory summary sanitizer (+ optional custom line) ────
   //

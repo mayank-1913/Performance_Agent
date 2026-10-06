@@ -10,22 +10,65 @@
 
 const VAR_RE = /\{\{\s*([^}]+?)\s*\}\}/g;
 
+function stripComments(text) {
+  return String(text || '')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/[^\n\r]*/g, '');
+}
+
+/**
+ * Persisted writes only. pm.variables.set is request-local and must not
+ * create a cross-request dependency.
+ */
+function persistedWrites(text) {
+  const names = [];
+  const stripped = stripComments(text);
+  const re = /pm\.(environment|collectionVariables|globals)\.set\s*\(/g;
+  let match;
+  while ((match = re.exec(stripped)) !== null) {
+    let i = re.lastIndex;
+    while (i < stripped.length && /\s/.test(stripped[i])) i += 1;
+    const q = stripped[i];
+    if (q !== "'" && q !== '"') continue;
+    const close = stripped.indexOf(q, i + 1);
+    if (close < 0) continue;
+    const name = stripped.slice(i + 1, close).trim();
+    if (name) names.push(name);
+  }
+  return names;
+}
+
 function collectRuntimeCapturedVarNames(parsed) {
   const requests = parsed?.requests || [];
   const out = new Set();
   for (const req of requests) {
-    const scripts = [...(req?.tests || []), ...(req?.prerequests || [])];
+    const scripts = [...(req?.prerequests || []), ...(req?.tests || [])];
     for (const text of scripts) {
       if (typeof text !== 'string') continue;
-      const setRe = /pm\.(?:environment|collectionVariables|globals|variables)\.set\s*\(\s*["']([^"']+)["']\s*,/g;
-      let match;
-      while ((match = setRe.exec(text)) !== null) {
-        const name = String(match[1] || '').trim();
-        if (name) out.add(name);
-      }
+      for (const name of persistedWrites(text)) out.add(name);
     }
   }
   return Array.from(out);
+}
+
+function collectWriters(requests) {
+  const byVar = new Map();
+  requests.forEach((req, index) => {
+    const seen = new Set();
+    const scripts = [...(req?.prerequests || []), ...(req?.tests || [])];
+    for (const text of scripts) {
+      if (typeof text !== 'string') continue;
+      for (const name of persistedWrites(text)) seen.add(name);
+    }
+    for (const name of seen) {
+      if (!byVar.has(name)) byVar.set(name, []);
+      byVar.get(name).push({
+        index,
+        requestName: req?.name || `request_${index}`,
+      });
+    }
+  });
+  return byVar;
 }
 
 function extractReferencedVars(req) {
@@ -68,17 +111,29 @@ function extractReferencedVars(req) {
 function buildDependencyGraph(parsed, authFlow = {}) {
   const requests = parsed?.requests || [];
   const runtimeCaptured = new Set(collectRuntimeCapturedVarNames(parsed));
+  const writers = collectWriters(requests);
 
-  const producers = new Map();
+  // Capture rules can name a variable even when the set() regex is obscured.
   for (const entry of authFlow.requestCaptureRules || []) {
     for (const rule of entry.rules || []) {
       if (!rule?.varName) continue;
-      const req = requests[entry.index];
-      producers.set(rule.varName, {
-        index: entry.index,
-        requestName: req?.name || `request_${entry.index}`,
-      });
+      runtimeCaptured.add(rule.varName);
+      if (!writers.has(rule.varName)) writers.set(rule.varName, []);
+      const list = writers.get(rule.varName);
+      if (!list.some((item) => item.index === entry.index)) {
+        list.push({
+          index: entry.index,
+          requestName: requests[entry.index]?.name || `request_${entry.index}`,
+        });
+        list.sort((a, b) => a.index - b.index);
+      }
     }
+  }
+
+  const producers = new Map();
+  for (const [varName, list] of writers.entries()) {
+    const last = list[list.length - 1];
+    if (last) producers.set(varName, last);
   }
 
   const perRequest = requests.map((req, index) => {
@@ -86,8 +141,13 @@ function buildDependencyGraph(parsed, authFlow = {}) {
     const deps = [];
     for (const varName of refs) {
       if (!runtimeCaptured.has(varName)) continue;
-      const producer = producers.get(varName);
-      if (!producer || producer.index >= index) continue;
+      const history = writers.get(varName) || [];
+      let producer = null;
+      for (const writer of history) {
+        if (writer.index < index) producer = writer;
+        else break;
+      }
+      if (!producer) continue;
       deps.push({
         varName,
         producerIndex: producer.index,

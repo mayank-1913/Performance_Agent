@@ -593,7 +593,12 @@ function scanUnresolvedVarsInUrl({ req, index, definedVars, envVars, warnings })
  *   summary: { info: number, warn: number, blocking: number, total: number },
  * }}
  */
-function scanCompatibility({ rawCollection, parsed, rawEnvironment = null } = {}) {
+function scanCompatibility({
+  rawCollection,
+  parsed,
+  rawEnvironment = null,
+  blockingRequestIndices = null,
+} = {}) {
   const warnings = [];
   const supported = new Set();
 
@@ -660,6 +665,9 @@ function scanCompatibility({ rawCollection, parsed, rawEnvironment = null } = {}
     supported.add(F.COOKIES_RUNTIME);
   }
 
+  const blockingSet =
+    blockingRequestIndices == null ? null : new Set(blockingRequestIndices);
+
   const summary = warnings.reduce(
     (acc, w) => {
       acc[w.severity] = (acc[w.severity] || 0) + 1;
@@ -669,10 +677,18 @@ function scanCompatibility({ rawCollection, parsed, rawEnvironment = null } = {}
     { info: 0, warn: 0, blocking: 0, total: 0 }
   );
 
+  const hasBlocking = warnings.some((w) => {
+    if (w.severity !== Severity.BLOCKING) return false;
+    if (blockingSet == null) return true;
+    const idx = w.request && typeof w.request.index === 'number' ? w.request.index : null;
+    if (idx == null) return true;
+    return blockingSet.has(idx);
+  });
+
   return {
     warnings,
     supported: Array.from(supported).sort(),
-    hasBlocking: summary.blocking > 0,
+    hasBlocking,
     summary,
   };
 }

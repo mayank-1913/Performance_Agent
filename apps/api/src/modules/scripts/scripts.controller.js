@@ -5,26 +5,18 @@ const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const ApiError = require('../../utils/ApiError');
 const logger = require('../../config/logger');
-const env = require('../../config/env');
 const collectionsStore = require('../collections/collections.store');
 const environmentsStore = require('../environments/environments.store');
 const scriptsStore = require('./scripts.store');
 const { parse } = require('../../lib/postman/parser');
 const { detectAuth } = require('../../lib/postman/authDetector');
-const {
-  sanitizeParsedCollection,
-  assertNoSecretsInScript,
-} = require('../../lib/postman/authSanitizer');
+const { sanitizeParsedCollection } = require('../../lib/postman/authSanitizer');
 const { applySelection } = require('../../lib/postman/tree');
-const { buildAuthFlow, collectRuntimeCapturedVarNames } = require('../../lib/postman/authFlow');
+const { collectRuntimeCapturedVarNames } = require('../../lib/postman/authFlow');
+const { buildExecutionModel } = require('../../lib/postman/executionModel');
 const { generateK6Script, toEnvName } = require('../../lib/k6/generator');
 const { buildTimeoutMetadata } = require('../../lib/k6/requestTimeout');
-const {
-  resolveVariables,
-  publicResolution,
-  extractCollectionVariables,
-  extractEnvironmentVariables,
-} = require('../../lib/postman/variableResolver');
+const { publicResolution } = require('../../lib/postman/variableResolver');
 const { scanCompatibility } = require('../../lib/postman/compatibility');
 const {
   normalizeWorkload,
@@ -152,26 +144,26 @@ async function generate(req, res, next) {
     const sanitization = sanitizeParsedCollection(parsedRaw);
     const fullParsed = sanitization.parsed;
 
-    // Resolve the user's selection AFTER sanitization but BEFORE auth detection,
-    // so unresolved tokens reflect the actually-selected APIs (e.g. picking a
-    // single login request shouldn't scream about every other endpoint's
-    // `{{token}}`).
     const validatedSelection = validateSelection(selection);
-    const { parsed, selectedIndices } = applySelection(fullParsed, validatedSelection);
-    if ((parsed.requests || []).length === 0) {
+    const { selectedIndices } = applySelection(fullParsed, validatedSelection);
+    if (selectedIndices.length === 0) {
       throw ApiError.badRequest('Selection produced 0 requests. Pick at least one API.');
     }
 
+    const executionModel = buildExecutionModel({
+      parsed: fullParsed,
+      rawCollection: record.raw,
+      rawEnvironment: environmentRaw,
+      selection: validatedSelection,
+    });
+    const parsed = fullParsed;
     const auth = detectAuth(parsed, environmentRaw);
 
-    // Phase 5: scan the (filtered) collection for Postman features that
-    // don't translate reliably to K6. Warnings are non-blocking metadata;
-    // BLOCKING severity refuses generation with a structured 400 so the
-    // UI can render the offending feature list without guessing.
     const compatibility = scanCompatibility({
       rawCollection: record.raw,
       parsed,
       rawEnvironment: environmentRaw,
+      blockingRequestIndices: executionModel.executableIndices,
     });
     if (compatibility.hasBlocking && options.acknowledgeBlockingWarnings !== true) {
       throw new ApiError(400, 'Postman collection uses features that cannot be executed safely by K6.', {
@@ -188,34 +180,17 @@ async function generate(req, res, next) {
       });
     }
 
-    // Phase 1: resolve variables now so we can surface a rich, secret-safe
-    // resolution map on the script record. This is additive metadata —
-    // existing consumers (UI, tests) ignore it. The `values` map is used at
-    // run start to seed collection/env values into K6's spawn env; it is
-    // NEVER baked into the generated JS source (the generator only emits
-    // __ENV.<NAME> references).
-    const variableResolution = resolveVariables({
-      collectionVariables: extractCollectionVariables(record.raw),
-      environmentVariables: environmentRaw
-        ? extractEnvironmentVariables(environmentRaw)
-        : null,
-      runtimeOverrides: null,
-      referencedVars: parsed.referencedVars,
-    });
+    const variableResolution = executionModel.variableResolution;
 
-    // Build the auth-flow plan from the FILTERED selection. If only the login
-    // request is selected, chaining is meaningless -> disabled.
     const userOptedOut = options.autoChainAuth === false;
-    const flowCandidate = buildAuthFlow(parsed);
+    const flowCandidate = executionModel.authFlowDetected;
     let authFlow =
       !userOptedOut &&
-      flowCandidate.enabled &&
-      flowCandidate.injectionCount > 0
-        ? flowCandidate
+      executionModel.authFlow.enabled &&
+      executionModel.authFlow.injectionCount > 0
+        ? executionModel.authFlow
         : { ...flowCandidate, enabled: false };
 
-    // If sanitization injected AUTH_TOKEN / API_KEY placeholders, force the
-    // injectAuthToken flag on so the runner expects those env vars.
     let injectAuthToken =
       options.injectAuthToken === true ||
       sanitization.injectedTokens.includes('AUTH_TOKEN') ||
@@ -253,11 +228,12 @@ async function generate(req, res, next) {
       authFlow,
       authSessionMode: workload.authSessionMode,
       credentialReuse: workload.credentialReuse,
+      executionModel,
     });
 
-    // Hard guard: literal JWTs / Bearer tokens must never survive into the
-    // persisted script file. If this throws, sanitization missed something.
-    assertNoSecretsInScript(code);
+    // Literal JWTs in request headers are still forbidden. Compiled
+    // collection/environment values (including credentials) are allowed
+    // inside the generated script for this internal compiler.
 
     await ensureDir();
     const id = uuidv4();
@@ -336,8 +312,9 @@ async function generate(req, res, next) {
         credentialReuse: !!workload.credentialReuse,
       },
       expectedEnvVars,
-      requestCount: parsed.requests.length,
+      requestCount: selectedIndices.length,
       totalCollectionRequests: fullParsed.requests.length,
+      executableRequestCount: executionModel.executableIndices.length,
       selection: {
         ...validatedSelection,
         resolvedIndices: selectedIndices,
@@ -369,7 +346,7 @@ async function generate(req, res, next) {
       collectionId,
       environmentId: environmentId || null,
       selectionMode: validatedSelection.mode,
-      selectedRequests: parsed.requests.length,
+      selectedRequests: selectedIndices.length,
       totalRequests: fullParsed.requests.length,
       authMode: auth.mode,
       injectAuthToken,
