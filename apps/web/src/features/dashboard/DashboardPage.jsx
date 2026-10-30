@@ -77,9 +77,7 @@ export default function DashboardPage() {
   return (
     <div className="page-stack">
       {error && (
-        <div className="rounded-md border border-rose-800 bg-rose-950/40 p-3 text-sm text-rose-300">
-          {error}
-        </div>
+        <div className="alert-error" role="alert">{error}</div>
       )}
 
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -87,16 +85,19 @@ export default function DashboardPage() {
           label="Collections"
           value={loading ? '—' : collections.length}
           hint="Postman collections in workspace"
+          accent="indigo"
         />
         <StatCard
           label="Requests"
           value={loading ? '—' : totalRequests}
           hint="Across all collections"
+          accent="emerald"
         />
         <StatCard
           label="Reports"
           value={loading ? '—' : reports.length}
           hint="Saved performance runs"
+          accent="amber"
         />
         <StatCard
           label="Active runs"
@@ -106,6 +107,7 @@ export default function DashboardPage() {
               ? 'No tests running'
               : 'Running or queued right now'
           }
+          accent={activeRuns.length > 0 ? 'rose' : 'indigo'}
         />
       </section>
 
@@ -146,7 +148,7 @@ export default function DashboardPage() {
                   <tr>
                     <td colSpan={5} className="px-4 py-6 text-center text-slate-500">
                       No collections yet.{' '}
-                      <Link to="/collections" className="text-brand-300 hover:underline">
+                      <Link to="/collections" className="link-brand">
                         Upload one
                       </Link>{' '}
                       to get started.
@@ -157,7 +159,7 @@ export default function DashboardPage() {
                   collections.slice(0, 5).map((c) => (
                     <tr
                       key={c.id}
-                      className="cursor-pointer hover:bg-slate-900/40"
+                      className="cursor-pointer hover-row"
                       onClick={() => navigate(`/collections/${c.id}/generate`)}
                     >
                       <td className="px-4 py-2.5 font-medium text-slate-100">
@@ -176,7 +178,7 @@ export default function DashboardPage() {
                         <Link
                           to={`/collections/${c.id}/generate`}
                           onClick={(e) => e.stopPropagation()}
-                          className="inline-flex items-center rounded-md bg-brand-500/15 px-2.5 py-1 text-xs font-medium text-brand-200 hover:bg-brand-500/25"
+                          className="pill-primary"
                         >
                           Generate
                         </Link>
@@ -209,7 +211,7 @@ export default function DashboardPage() {
                 <li key={r.id}>
                   <Link
                     to={`/reports/${r.id}`}
-                    className="flex items-center gap-3 py-3 -mx-2 px-2 rounded-md hover:bg-slate-900/60"
+                    className="flex items-center gap-3 py-3 -mx-2 px-2 rounded-md hover-row"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-sm text-slate-100">

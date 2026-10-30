@@ -32,6 +32,7 @@ const ReportsPage = lazy(() => import('../features/reports/ReportsPage.jsx'));
 const ReportDetailPage = lazy(() =>
   import('../features/reports/ReportDetailPage.jsx')
 );
+const UsersPage = lazy(() => import('../features/admin/UsersPage.jsx'));
 const NotFoundPage = lazy(() => import('../shared/pages/NotFoundPage.jsx'));
 
 export default function App() {
@@ -58,6 +59,14 @@ export default function App() {
             <Route path="/runs/:runId" element={<RunDetailPage />} />
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/reports/:id" element={<ReportDetailPage />} />
+            <Route
+              path="/admin/users"
+              element={
+                <ProtectedRoute requireRole="admin">
+                  <UsersPage />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Legacy routes — Upload and Environments are no longer top-level
                 destinations. Upload now lives inside the Collections page modal,

@@ -42,13 +42,18 @@ export default function LoginPage() {
       {/* Soft ambient glow blobs to add depth behind the login panel. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -top-24 -left-24 h-[420px] w-[420px] rounded-full opacity-40 blur-3xl"
-        style={{ background: 'radial-gradient(circle, rgba(230,117,66,0.45), transparent 60%)' }}
+        className="pointer-events-none absolute -top-32 -left-24 h-[460px] w-[460px] rounded-full opacity-60 blur-3xl"
+        style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.35), transparent 65%)' }}
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute -bottom-32 -right-24 h-[480px] w-[480px] rounded-full opacity-40 blur-3xl"
-        style={{ background: 'radial-gradient(circle, rgba(0,116,253,0.45), transparent 60%)' }}
+        className="pointer-events-none absolute top-1/3 -right-32 h-[520px] w-[520px] rounded-full opacity-50 blur-3xl"
+        style={{ background: 'radial-gradient(circle, rgba(236,72,153,0.28), transparent 65%)' }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -bottom-40 left-1/3 h-[500px] w-[500px] rounded-full opacity-50 blur-3xl"
+        style={{ background: 'radial-gradient(circle, rgba(59,130,246,0.30), transparent 65%)' }}
       />
 
       <div className="relative w-full max-w-md">
@@ -124,7 +129,7 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-200 force-wrap">
+              <div className="alert-error force-wrap" role="alert">
                 {error}
               </div>
             )}

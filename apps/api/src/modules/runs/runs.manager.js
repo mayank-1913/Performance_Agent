@@ -155,6 +155,9 @@ function buildManifest(ctx, script, collection, parsedReport, normalizedReport =
       logFilePath: ctx.logFilePath || null,
       scriptFilePath: script?.filePath || null,
     },
+    // Phase 9: inherit ownership from the backing script so USER sees only
+    // their own reports and ADMIN sees everything.
+    ownerUserId: script?.ownerUserId || null,
   };
 }
 

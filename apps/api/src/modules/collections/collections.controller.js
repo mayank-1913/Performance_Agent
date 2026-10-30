@@ -7,6 +7,7 @@ const ApiError = require('../../utils/ApiError');
 const logger = require('../../config/logger');
 const store = require('./collections.store');
 const environmentsStore = require('../environments/environments.store');
+const { isAdmin, ownerIdFor, assertCanSee, canSee } = require('../auth/ownership');
 const { parse } = require('../../lib/postman/parser');
 const { detectAuth } = require('../../lib/postman/authDetector');
 const { sanitizeParsedCollection } = require('../../lib/postman/authSanitizer');
@@ -83,6 +84,7 @@ async function uploadCollection(req, res, next) {
       uploadedAt: new Date().toISOString(),
       summary: summarize(parsed),
       raw: parsed,
+      ownerUserId: ownerIdFor(req),
     };
 
     // Auth detection (without environment for now)
@@ -124,13 +126,16 @@ function publicView(record) {
   return safe;
 }
 
-function listCollections(_req, res) {
-  res.json({ success: true, data: store.list().map(publicView) });
+function listCollections(req, res) {
+  const items = isAdmin(req) ? store.list() : store.listByOwner(req.user.id);
+  res.json({ success: true, data: items.map(publicView) });
 }
 
 function getCollection(req, res, next) {
   const record = store.get(req.params.id);
-  if (!record) return next(ApiError.notFound('Collection not found'));
+  if (!record || !canSee(req, record)) {
+    return next(ApiError.notFound('Collection not found'));
+  }
   res.json({ success: true, data: publicView(record) });
 }
 
@@ -140,13 +145,17 @@ function getCollection(req, res, next) {
  */
 function authCheck(req, res, next) {
   const record = store.get(req.params.id);
-  if (!record) return next(ApiError.notFound('Collection not found'));
+  if (!record || !canSee(req, record)) {
+    return next(ApiError.notFound('Collection not found'));
+  }
 
   const environmentId = req.query.environmentId || req.body?.environmentId || null;
   let environmentRaw = null;
   if (environmentId) {
     const envRec = environmentsStore.get(String(environmentId));
-    if (!envRec) return next(ApiError.notFound('Environment not found'));
+    if (!envRec || !canSee(req, envRec)) {
+      return next(ApiError.notFound('Environment not found'));
+    }
     environmentRaw = envRec.raw;
   }
 
@@ -185,7 +194,9 @@ function authCheck(req, res, next) {
  */
 function getTree(req, res, next) {
   const record = store.get(req.params.id);
-  if (!record) return next(ApiError.notFound('Collection not found'));
+  if (!record || !canSee(req, record)) {
+    return next(ApiError.notFound('Collection not found'));
+  }
 
   const parsedNorm = sanitizeParsedCollection(parse(record.raw)).parsed;
   const tree = buildTree(record.raw, parsedNorm);
@@ -207,6 +218,8 @@ function getTree(req, res, next) {
 async function deleteCollection(req, res, next) {
   try {
     const record = store.get(req.params.id);
+    // DELETE is already role-gated at the route layer (admin only). This 404
+    // branch covers the admin asking for an id that doesn't exist.
     if (!record) return next(ApiError.notFound('Collection not found'));
 
     const filesToTry = [record.filePath].filter(Boolean);

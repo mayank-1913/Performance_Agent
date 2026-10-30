@@ -43,6 +43,7 @@ function rowToRecord(row) {
     uploadedAt: row.uploaded_at,
     summary: row.summary_json ? JSON.parse(row.summary_json) : null,
     auth: row.auth_json ? JSON.parse(row.auth_json) : null,
+    ownerUserId: row.owner_user_id || null,
     _rawPath: row.raw_path || null,
   };
   Object.defineProperty(rec, 'raw', {
@@ -67,8 +68,8 @@ function add(record) {
     .prepare(
       `INSERT OR REPLACE INTO collections (
          id, original_name, stored_name, file_path, mimetype, size_bytes,
-         uploaded_at, summary_json, auth_json, raw_path
-       ) VALUES (?,?,?,?,?,?,?,?,?,?)`
+         uploaded_at, summary_json, auth_json, raw_path, owner_user_id
+       ) VALUES (?,?,?,?,?,?,?,?,?,?,?)`
     )
     .run(
       record.id,
@@ -80,7 +81,8 @@ function add(record) {
       record.uploadedAt || new Date().toISOString(),
       record.summary ? JSON.stringify(record.summary) : null,
       record.auth ? JSON.stringify(record.auth) : null,
-      rawPath
+      rawPath,
+      record.ownerUserId ?? null
     );
   return get(record.id);
 }
@@ -94,6 +96,15 @@ function list() {
   return getDb()
     .prepare('SELECT * FROM collections ORDER BY uploaded_at DESC')
     .all()
+    .map(rowToRecord);
+}
+
+function listByOwner(ownerUserId) {
+  return getDb()
+    .prepare(
+      'SELECT * FROM collections WHERE owner_user_id = ? ORDER BY uploaded_at DESC'
+    )
+    .all(ownerUserId)
     .map(rowToRecord);
 }
 
@@ -112,4 +123,4 @@ function remove(id) {
   return res.changes > 0;
 }
 
-module.exports = { add, get, list, remove };
+module.exports = { add, get, list, listByOwner, remove };

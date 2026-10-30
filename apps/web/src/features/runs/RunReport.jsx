@@ -38,17 +38,17 @@ const fmtPct = (r) => (r == null ? '—' : `${(r * 100).toFixed(2)}%`);
 /* ---------- Stat card ---------- */
 function Stat({ label, value, sub, tone = 'slate' }) {
   const toneCls = {
-    slate: 'text-slate-100',
-    ok: 'text-emerald-300',
-    bad: 'text-rose-300',
-    warn: 'text-amber-300',
-    info: 'text-sky-300',
+    slate: 'text-ink-900',
+    ok: 'text-emerald-600',
+    bad: 'text-rose-600',
+    warn: 'text-amber-600',
+    info: 'text-brand-600',
   }[tone];
   return (
-    <div className="rounded-md border border-slate-700 bg-slate-800 p-3 min-w-0">
-      <div className="text-[11px] uppercase tracking-wide text-slate-500">{label}</div>
-      <div className={`mt-1 text-xl font-semibold ${toneCls} force-wrap`}>{value}</div>
-      {sub != null && <div className="mt-0.5 text-xs text-slate-500">{sub}</div>}
+    <div className="rounded-xl border border-soft bg-white p-4 min-w-0 shadow-card">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-500">{label}</div>
+      <div className={`mt-1.5 font-num text-2xl font-semibold tracking-tight ${toneCls} force-wrap`}>{value}</div>
+      {sub != null && <div className="mt-1 text-xs text-ink-500">{sub}</div>}
     </div>
   );
 }
@@ -56,9 +56,9 @@ function Stat({ label, value, sub, tone = 'slate' }) {
 /* ---------- Chart helper ---------- */
 function ChartCard({ title, children, hint }) {
   return (
-    <div className="rounded-md border border-slate-700 bg-white p-3 min-w-0">
-      <div className="flex items-center justify-between text-xs text-slate-500">
-        <span className="font-semibold text-slate-200">{title}</span>
+    <div className="rounded-xl border border-soft bg-white p-4 min-w-0 shadow-card">
+      <div className="flex items-center justify-between text-xs text-ink-500">
+        <span className="font-semibold text-ink-800">{title}</span>
         {hint && <span>{hint}</span>}
       </div>
       <div className="mt-2 h-[200px] w-full">
@@ -68,8 +68,8 @@ function ChartCard({ title, children, hint }) {
   );
 }
 
-const TICK_STYLE = { fontSize: 10, fill: '#64748b' };
-const GRID = { stroke: '#1f2937' };
+const TICK_STYLE = { fontSize: 10, fill: '#6b7280' };
+const GRID = { stroke: '#e5e7eb' };
 
 function formatTick(t) {
   // ISO -> HH:MM:SS for chart axes
@@ -125,10 +125,10 @@ export default function RunReport({ runId, status, source = 'runs' }) {
   }
   if (error) {
     return (
-      <div className="rounded-md border border-rose-800 bg-rose-950/40 p-3 text-sm text-rose-300">
+      <div className="alert-error">
         {error}
         <button
-          className="ml-3 underline text-rose-200 hover:text-rose-100"
+          className="ml-3 underline text-rose-700 hover:text-rose-800"
           onClick={() => setTick((t) => t + 1)}
         >
           Retry
@@ -214,7 +214,7 @@ function ReportBody({
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         <Stat label="Total requests" value={reqs.total ?? '—'} />
         <Stat
           label="Failed"
@@ -296,8 +296,8 @@ function ReportBody({
                         className={[
                           'rounded px-1.5 py-0.5 text-[11px] font-semibold',
                           t.ok
-                            ? 'bg-emerald-500/15 text-emerald-300'
-                            : 'bg-rose-500/15 text-rose-300',
+                            ? 'bg-emerald-50 text-emerald-700'
+                            : 'bg-rose-50 text-rose-700',
                         ].join(' ')}
                       >
                         {t.ok ? 'pass' : 'fail'}
@@ -467,14 +467,14 @@ function ReportBody({
                   <td className="px-3 py-1.5 font-mono text-xs text-slate-300">{fmtMs(r.p99)}</td>
                   <td
                     className={`px-3 py-1.5 font-mono text-xs ${
-                      r.errors > 0 ? 'text-rose-300' : 'text-slate-400'
+                      r.errors > 0 ? 'text-rose-700' : 'text-slate-400'
                     }`}
                   >
                     {r.errors}
                   </td>
                   <td
                     className={`px-3 py-1.5 font-mono text-xs ${
-                      r.errorRate > 0 ? 'text-rose-300' : 'text-slate-400'
+                      r.errorRate > 0 ? 'text-rose-700' : 'text-slate-400'
                     }`}
                   >
                     {fmtPct(r.errorRate)}
@@ -507,8 +507,8 @@ function ReportBody({
                   <tr key={f.name} className="hover:bg-slate-900/40">
                     <td className="px-3 py-1.5 max-w-[24rem] truncate text-slate-100">{f.name}</td>
                     <td className="px-3 py-1.5 font-mono text-xs text-slate-300">{f.method || '—'}</td>
-                    <td className="px-3 py-1.5 font-mono text-xs text-rose-300">{f.count}</td>
-                    <td className="px-3 py-1.5 font-mono text-xs text-rose-300">
+                    <td className="px-3 py-1.5 font-mono text-xs text-rose-700">{f.count}</td>
+                    <td className="px-3 py-1.5 font-mono text-xs text-rose-700">
                       {f.lastStatus ?? '—'}
                     </td>
                   </tr>

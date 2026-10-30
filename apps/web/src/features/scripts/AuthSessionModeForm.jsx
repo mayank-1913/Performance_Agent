@@ -38,8 +38,8 @@ export default function AuthSessionModeForm({
 
   return (
     <div className="card">
-      <h3 className="text-sm font-semibold text-slate-200">Authentication mode</h3>
-      <p className="text-xs text-slate-500 mt-1">
+      <h3 className="text-sm font-semibold text-ink-900">Authentication mode</h3>
+      <p className="text-xs text-ink-600 mt-1">
         Choose how authentication is applied across virtual users. This is independent of the
         Postman collection structure.
       </p>
@@ -55,11 +55,11 @@ export default function AuthSessionModeForm({
               disabled={disabled}
               onClick={() => set({ authSessionMode: m.id })}
               className={[
-                'rounded px-2.5 py-1 text-xs font-medium border transition',
+                'rounded-md px-3 py-1.5 text-xs font-semibold border transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:ring-offset-2',
                 active
-                  ? 'border-blue-600 bg-blue-50 text-blue-800 shadow-sm'
-                  : 'border-slate-300 bg-white text-slate-700 hover:border-blue-400',
-                disabled ? 'opacity-40 cursor-not-allowed' : '',
+                  ? 'border-brand-500 bg-brand-50 text-brand-700 shadow-sm'
+                  : 'border-gray-300 bg-white text-ink-700 hover:border-brand-400 hover:bg-brand-50/60',
+                disabled ? 'opacity-60 cursor-not-allowed hover:border-gray-300' : '',
               ].join(' ')}
               title={disabled ? 'Requires a login request in the selected flow' : m.hint}
             >
@@ -68,11 +68,11 @@ export default function AuthSessionModeForm({
           );
         })}
       </div>
-      <p className="mt-1 text-[11px] text-slate-600">{MODES.find((m) => m.id === mode)?.hint}</p>
+      <p className="mt-1 text-[11px] text-ink-600">{MODES.find((m) => m.id === mode)?.hint}</p>
 
       {mode === 'PER_VU_LOGIN' && (
         <div className="mt-4 space-y-3">
-          <label className="flex items-center gap-2 text-xs text-slate-300">
+          <label className="flex items-center gap-2 text-xs text-ink-700">
             <input
               type="checkbox"
               checked={!!credentialReuse}
@@ -88,7 +88,7 @@ export default function AuthSessionModeForm({
               value={credentialDataset || ''}
               onChange={(e) => set({ credentialDataset: e.target.value })}
             />
-            <p className="mt-1 text-[11px] text-slate-500">
+            <p className="mt-1 text-[11px] text-ink-500">
               Optional at generation time. Provide at run launch if not set here. Values are never
               shown in reports or logs.
             </p>

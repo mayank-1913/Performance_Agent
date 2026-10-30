@@ -33,8 +33,8 @@ export default function LoadProfileForm({ value, onChange }) {
 
   return (
     <div className="card">
-      <h3 className="text-sm font-semibold text-slate-900">Load profile</h3>
-      <p className="text-xs text-slate-600 mt-1">
+      <h3 className="text-sm font-semibold text-ink-900">Load profile</h3>
+      <p className="text-xs text-ink-600 mt-1">
         Pick a workload profile or stick with Custom. The four fields below always represent
         exactly what the generated K6 script will run — presets fill them in for you.
       </p>
@@ -50,10 +50,10 @@ export default function LoadProfileForm({ value, onChange }) {
                 type="button"
                 onClick={() => setProfile(p.id)}
                 className={[
-                  'rounded px-2.5 py-1 text-xs font-medium border transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2',
+                  'rounded-md px-3 py-1.5 text-xs font-semibold border transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:ring-offset-2',
                   active
-                    ? 'border-blue-600 bg-blue-50 text-blue-800 shadow-sm'
-                    : 'border-slate-300 bg-white text-slate-700 hover:border-blue-400 hover:bg-blue-50/50',
+                    ? 'border-brand-500 bg-brand-50 text-brand-700 shadow-sm'
+                    : 'border-gray-300 bg-white text-ink-700 hover:border-brand-400 hover:bg-brand-50/60',
                 ].join(' ')}
                 title={p.hint}
               >
@@ -62,12 +62,12 @@ export default function LoadProfileForm({ value, onChange }) {
             );
           })}
         </div>
-        <p className="mt-1 text-[11px] text-slate-600">
+        <p className="mt-1 text-[11px] text-ink-600">
           {PROFILE_META.find((p) => p.id === profile)?.hint}
         </p>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <label className="label">Virtual users</label>
           <input

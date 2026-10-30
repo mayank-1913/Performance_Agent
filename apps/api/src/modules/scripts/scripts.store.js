@@ -31,6 +31,7 @@ function rowToRecord(row) {
       : null,
     sanitization: row.sanitization_json ? JSON.parse(row.sanitization_json) : null,
     authFlow: row.auth_flow_json ? JSON.parse(row.auth_flow_json) : null,
+    ownerUserId: row.owner_user_id || null,
   };
 }
 
@@ -42,8 +43,9 @@ function add(record) {
          id, collection_id, environment_id, file_name, file_path, size_bytes,
          created_at, auth_json, inject_auth_token, load_profile_json,
          expected_env_vars_json, request_count, total_collection_requests,
-         selection_json, selected_requests_json, sanitization_json, auth_flow_json
-       ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+         selection_json, selected_requests_json, sanitization_json, auth_flow_json,
+         owner_user_id
+       ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
     )
     .run(
       record.id,
@@ -62,7 +64,8 @@ function add(record) {
       record.selection ? JSON.stringify(record.selection) : null,
       record.selectedRequests ? JSON.stringify(record.selectedRequests) : null,
       record.sanitization ? JSON.stringify(record.sanitization) : null,
-      record.authFlow ? JSON.stringify(record.authFlow) : null
+      record.authFlow ? JSON.stringify(record.authFlow) : null,
+      record.ownerUserId ?? null
     );
   return get(record.id);
 }
@@ -88,6 +91,24 @@ function list() {
     .map(rowToRecord);
 }
 
+function listByOwner(ownerUserId) {
+  return getDb()
+    .prepare(
+      'SELECT * FROM scripts WHERE owner_user_id = ? ORDER BY created_at DESC'
+    )
+    .all(ownerUserId)
+    .map(rowToRecord);
+}
+
+function listByCollectionAndOwner(collectionId, ownerUserId) {
+  return getDb()
+    .prepare(
+      'SELECT * FROM scripts WHERE collection_id = ? AND owner_user_id = ? ORDER BY created_at DESC'
+    )
+    .all(collectionId, ownerUserId)
+    .map(rowToRecord);
+}
+
 function remove(id) {
   const res = getDb().prepare('DELETE FROM scripts WHERE id = ?').run(id);
   return res.changes > 0;
@@ -105,7 +126,9 @@ module.exports = {
   add,
   get,
   list,
+  listByOwner,
   listByCollection,
+  listByCollectionAndOwner,
   remove,
   clearEnvironmentReferences,
 };

@@ -104,6 +104,16 @@
     letter-spacing: -0.018em;
     color: var(--text-primary);
   }
+
+  /* Respect reduced-motion preferences for lift/pulse-style hovers. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
 
 @layer utilities {
@@ -193,15 +203,15 @@
 
   /* =================== Cards =================== */
   .card {
-    @apply rounded-2xl p-5 transition-colors;
+    @apply rounded-2xl p-4 sm:p-5 transition-colors;
     background-color: var(--bg-card);
     border: 1px solid var(--border-soft);
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06);
     color: var(--text-primary);
     min-width: 0;
   }
-  .card-tight { @apply card p-4; }
-  .card-loud  { @apply card p-6; }
+  .card-tight { @apply card p-3 sm:p-4; }
+  .card-loud  { @apply card p-5 sm:p-6; }
   .card-hover { @apply transition-all duration-200; }
   .card-hover:hover {
     border-color: #d1d5db;
@@ -253,22 +263,22 @@
 
   /* =================== Layout primitives =================== */
   .page-container {
-    @apply mx-auto w-full max-w-7xl px-5 py-7 md:px-10 md:py-9;
+    @apply mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 sm:py-7 md:px-10 md:py-9;
     min-width: 0;
   }
   .page-stack {
-    @apply space-y-7;
+    @apply space-y-5 sm:space-y-7;
     min-width: 0;
   }
   .page-hero {
-    @apply flex flex-wrap items-end justify-between gap-4;
+    @apply flex flex-wrap items-end justify-between gap-3 sm:gap-4;
   }
   .page-hero-title {
-    @apply font-display text-2xl font-semibold tracking-tight;
+    @apply font-display text-xl sm:text-2xl font-semibold tracking-tight;
     color: var(--text-primary);
   }
   .page-hero-subtitle {
-    @apply mt-1 max-w-2xl text-sm;
+    @apply mt-1 max-w-2xl text-xs sm:text-sm;
     color: var(--text-muted);
   }
 
@@ -396,4 +406,155 @@
     background-color: #ffffff;
     border-bottom: 1px solid var(--border-soft);
   }
+
+  /* =================== Alerts =================== */
+  /* Semantic alert styles — use these instead of inline rose-/emerald-
+     combinations which fight the light theme and give low contrast. */
+  .alert {
+    @apply flex items-start gap-2.5 rounded-xl p-3 text-sm;
+    border: 1px solid transparent;
+  }
+  .alert-error {
+    @apply alert;
+    background-color: #fef2f2;
+    border-color: #fecaca;
+    color: #991b1b;
+  }
+  .alert-success {
+    @apply alert;
+    background-color: #ecfdf5;
+    border-color: #a7f3d0;
+    color: #065f46;
+  }
+  .alert-warning {
+    @apply alert;
+    background-color: #fffbeb;
+    border-color: #fde68a;
+    color: #92400e;
+  }
+  .alert-info {
+    @apply alert;
+    background-color: #eef2ff;
+    border-color: #c7d2fe;
+    color: #3730a3;
+  }
+
+  /* =================== HTTP method badges =================== */
+  .method-badge {
+    @apply inline-flex items-center justify-center rounded-md px-2 py-0.5 text-[10px] font-bold tracking-wider;
+    min-width: 3.25rem;
+    border: 1px solid transparent;
+    font-variant: tabular-nums;
+  }
+  .method-get    { background:#eff6ff; color:#1d4ed8; border-color:#bfdbfe; }
+  .method-post   { background:#ecfdf5; color:#047857; border-color:#a7f3d0; }
+  .method-put    { background:#fffbeb; color:#b45309; border-color:#fde68a; }
+  .method-patch  { background:#f5f3ff; color:#6d28d9; border-color:#ddd6fe; }
+  .method-delete { background:#fef2f2; color:#b91c1c; border-color:#fecaca; }
+  .method-head,
+  .method-options { background:#f3f4f6; color:#374151; border-color:#e5e7eb; }
+
+  /* =================== Links =================== */
+  .link-brand {
+    color: var(--brand-600);
+    font-weight: 500;
+  }
+  .link-brand:hover {
+    color: var(--brand-700, #4338ca);
+    text-decoration: underline;
+  }
+
+  /* =================== Row hover =================== */
+  /* Clearer hover state for interactive table rows / list items than the
+     remapped slate overlay. */
+  .hover-row {
+    @apply transition-colors;
+  }
+  .hover-row:hover {
+    background-color: #f9fafb;
+  }
+
+  /* =================== Table action pills =================== */
+  /* Compact, solid action buttons used in tables. Clearly readable at
+     small sizes — pastel-50 fills were too washed out against white cards. */
+  .pill-action {
+    @apply inline-flex items-center justify-center rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors;
+    line-height: 1.1;
+  }
+  .pill-primary {
+    @apply pill-action text-white;
+    background-color: var(--brand-500);
+  }
+  .pill-primary:hover:not(:disabled) { background-color: var(--brand-600); }
+
+  .pill-neutral {
+    @apply pill-action;
+    background-color: #ffffff;
+    color: var(--text-primary);
+    border: 1px solid var(--border-soft);
+  }
+  .pill-neutral:hover:not(:disabled) {
+    background-color: #f9fafb;
+    border-color: #d1d5db;
+  }
+
+  .pill-danger {
+    @apply pill-action;
+    background-color: #ffffff;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+  }
+  .pill-danger:hover:not(:disabled) {
+    background-color: #fef2f2;
+    border-color: #fca5a5;
+  }
+
+  /* =================== Danger button =================== */
+  .btn-danger {
+    @apply btn text-white;
+    background-color: #e11d48;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(225, 29, 72, 0.30);
+  }
+  .btn-danger:hover:not(:disabled) {
+    background-color: #be123c;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px -2px rgba(225, 29, 72, 0.35);
+  }
+
+  .btn-danger-ghost {
+    @apply btn bg-transparent;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+  }
+  .btn-danger-ghost:hover:not(:disabled) {
+    background-color: #fef2f2;
+    color: #991b1b;
+  }
+
+  /* =================== Aura hero gradient =================== */
+  /* Subtle multi-stop gradient for hero/empty states only. Keep text in a
+     neutral surface on top — do not place dense content directly on this. */
+  .aura-hero {
+    background:
+      radial-gradient(ellipse at 15% 20%, rgba(99,102,241,0.18) 0%, transparent 55%),
+      radial-gradient(ellipse at 85% 10%, rgba(236,72,153,0.14) 0%, transparent 55%),
+      radial-gradient(ellipse at 50% 100%, rgba(59,130,246,0.14) 0%, transparent 60%),
+      #ffffff;
+  }
+
+  /* =================== Metric card accent variants =================== */
+  .metric-accent-indigo::before {
+    background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  }
+  .metric-accent-emerald::before {
+    background: linear-gradient(90deg, #10b981, #14b8a6);
+  }
+  .metric-accent-amber::before {
+    background: linear-gradient(90deg, #f59e0b, #f97316);
+  }
+  .metric-accent-rose::before {
+    background: linear-gradient(90deg, #ef4444, #ec4899);
+  }
 }
+
+

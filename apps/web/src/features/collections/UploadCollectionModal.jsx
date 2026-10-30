@@ -108,8 +108,8 @@ export default function UploadCollectionModal({ open, onClose, onUploaded }) {
               className={[
                 'mt-5 cursor-pointer rounded-xl border-2 border-dashed p-8 text-center transition-all',
                 dragOver
-                  ? 'border-brand-500 bg-brand-500/10'
-                  : 'border-slate-600 bg-slate-800 hover:border-slate-500 hover:bg-slate-900',
+                  ? 'border-brand-500 bg-brand-50'
+                  : 'border-gray-300 bg-gray-50 hover:border-brand-400 hover:bg-brand-50/50',
               ].join(' ')}
             >
               <input
@@ -129,9 +129,9 @@ export default function UploadCollectionModal({ open, onClose, onUploaded }) {
                   </>
                 ) : (
                   <>
-                    <div className="text-base font-medium text-slate-200">
+                    <div className="text-base font-medium text-ink-900">
                       Drag &amp; drop your{' '}
-                      <code className="text-brand-300">.json</code> file here
+                      <code className="rounded bg-brand-50 px-1.5 py-0.5 font-mono text-xs text-brand-700">.json</code> file here
                     </div>
                     <div className="mt-1 text-xs text-slate-500">or click to browse</div>
                   </>
@@ -159,25 +159,23 @@ export default function UploadCollectionModal({ open, onClose, onUploaded }) {
             </div>
 
             {error && (
-              <div className="mt-4 rounded-md border border-rose-800 bg-rose-950/40 p-3 text-sm text-rose-300">
-                {error}
-              </div>
+              <div className="alert-error mt-4" role="alert">{error}</div>
             )}
           </>
         )}
 
         {result && (
-          <div className="mt-5 rounded-lg border border-emerald-700/40 bg-emerald-500/10 p-4">
-            <div className="text-sm font-semibold text-emerald-200">Uploaded successfully</div>
+          <div className="alert-success mt-5 flex-col !items-stretch">
+            <div className="text-sm font-semibold">Uploaded successfully</div>
             <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-              <dt className="text-emerald-200/70">Name</dt>
-              <dd className="text-slate-100">{result.summary?.name}</dd>
-              <dt className="text-emerald-200/70">Requests</dt>
-              <dd className="text-slate-100">{result.summary?.requestCount}</dd>
-              <dt className="text-emerald-200/70">Folders</dt>
-              <dd className="text-slate-100">{result.summary?.folderCount}</dd>
-              <dt className="text-emerald-200/70">Size</dt>
-              <dd className="text-slate-100">{(result.sizeBytes / 1024).toFixed(1)} KB</dd>
+              <dt className="text-emerald-700/80">Name</dt>
+              <dd className="text-ink-900 font-medium">{result.summary?.name}</dd>
+              <dt className="text-emerald-700/80">Requests</dt>
+              <dd className="text-ink-900 font-medium">{result.summary?.requestCount}</dd>
+              <dt className="text-emerald-700/80">Folders</dt>
+              <dd className="text-ink-900 font-medium">{result.summary?.folderCount}</dd>
+              <dt className="text-emerald-700/80">Size</dt>
+              <dd className="text-ink-900 font-medium">{(result.sizeBytes / 1024).toFixed(1)} KB</dd>
             </dl>
             <div className="mt-4 flex justify-end gap-2">
               <button className="btn-secondary" onClick={handleClose}>

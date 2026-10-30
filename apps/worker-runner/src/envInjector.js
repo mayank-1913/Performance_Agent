@@ -27,6 +27,7 @@
 
 const RUNTIME_KNOWN_KEYS = new Set([
   'AUTH_TOKEN',
+  'AUTH_HEADER_VALUE',
   'JWT_TOKEN',
   'SESSION_ID',
   'HOST_PATH',
@@ -117,11 +118,24 @@ function buildK6Env({
 
   // Secrets: forward EVERY user-provided key. AUTH_TOKEN / JWT_TOKEN get
   // their Bearer prefix stripped so the script can add it back once.
+  // AUTH_HEADER_VALUE is a dedicated verbatim slot: the user supplies the
+  // complete Authorization header value (including scheme) and we must
+  // forward it exactly, with no trim, Bearer handling, or case folding.
   for (const [k, raw] of Object.entries(secrets || {})) {
-    if (!hasMeaningfulValue(raw)) continue;
     if (!VALID_ENV_KEY_RE.test(k)) continue;
     if (PASSTHROUGH_ENV_KEYS.has(k)) continue;
 
+    if (k === 'AUTH_HEADER_VALUE') {
+      // Preserve the user's exact string. Only drop when truly empty.
+      if (raw == null) continue;
+      const v = String(raw);
+      if (v.length === 0) continue;
+      out[k] = v;
+      if (!overrides.includes(k)) overrides.push(k);
+      continue;
+    }
+
+    if (!hasMeaningfulValue(raw)) continue;
     let v = String(raw);
     if (k === 'AUTH_TOKEN' || k === 'JWT_TOKEN') {
       const stripped = normalizeBearer(v);

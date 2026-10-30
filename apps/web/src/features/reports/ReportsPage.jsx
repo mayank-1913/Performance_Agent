@@ -1,21 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { reportsApi } from '../../shared/api/reports.api.js';
+import { useAuth } from '../../shared/auth/AuthContext.jsx';
 
 const STATUS_TONES = {
-  completed: 'bg-emerald-500/15 text-emerald-300 border-emerald-700/50',
-  failed: 'bg-rose-500/15 text-rose-300 border-rose-700/50',
-  stopped: 'bg-amber-500/15 text-amber-300 border-amber-700/50',
+  completed: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  failed: 'bg-rose-50 text-rose-700 border-rose-200',
+  stopped: 'bg-amber-50 text-amber-700 border-amber-200',
 };
 const METHOD_TONES = {
-  GET: 'bg-emerald-500/15 text-emerald-300',
-  POST: 'bg-sky-500/15 text-sky-300',
-  PUT: 'bg-amber-500/15 text-amber-300',
-  PATCH: 'bg-amber-500/15 text-amber-300',
-  DELETE: 'bg-rose-500/15 text-rose-300',
-  HEAD: 'bg-slate-500/15 text-slate-300',
-  OPTIONS: 'bg-slate-500/15 text-slate-300',
-  MIXED: 'bg-violet-500/15 text-violet-300',
+  GET: 'bg-blue-50 text-blue-700 border border-blue-200',
+  POST: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+  PUT: 'bg-amber-50 text-amber-700 border border-amber-200',
+  PATCH: 'bg-violet-50 text-violet-700 border border-violet-200',
+  DELETE: 'bg-rose-50 text-rose-700 border border-rose-200',
+  HEAD: 'bg-gray-50 text-gray-700 border border-gray-200',
+  OPTIONS: 'bg-gray-50 text-gray-700 border border-gray-200',
+  MIXED: 'bg-violet-50 text-violet-700 border border-violet-200',
 };
 const STATUS_OPTIONS = ['all', 'completed', 'failed', 'stopped'];
 const METHOD_OPTIONS = ['all', 'GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS', 'MIXED'];
@@ -27,7 +28,7 @@ function fmtDuration(ms) {
 }
 
 function StatusBadge({ status }) {
-  const cls = STATUS_TONES[status] || 'bg-slate-500/15 text-slate-300 border-slate-700/50';
+  const cls = STATUS_TONES[status] || 'bg-gray-50 text-gray-700 border-gray-200';
   return (
     <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold ${cls}`}>
       {status || '—'}
@@ -36,7 +37,7 @@ function StatusBadge({ status }) {
 }
 
 function MethodBadge({ method }) {
-  const cls = METHOD_TONES[(method || '').toUpperCase()] || 'bg-slate-500/15 text-slate-300';
+  const cls = METHOD_TONES[(method || '').toUpperCase()] || 'bg-gray-100 text-slate-300';
   return (
     <span className={`rounded px-1.5 py-0.5 text-[10px] font-mono font-semibold ${cls}`}>
       {method || '—'}
@@ -77,7 +78,7 @@ function ConfirmDeleteModal({ report, onCancel, onConfirm, busy }) {
             Cancel
           </button>
           <button
-            className="btn-primary !bg-rose-600 hover:!bg-rose-500"
+            className="btn-danger"
             onClick={onConfirm}
             disabled={busy}
           >
@@ -90,6 +91,8 @@ function ConfirmDeleteModal({ report, onCancel, onConfirm, busy }) {
 }
 
 export default function ReportsPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [searchParams, setSearchParams] = useSearchParams();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -288,7 +291,7 @@ export default function ReportsPage() {
       </div>
 
       {error && (
-        <div className="rounded-md border border-rose-800 bg-rose-950/40 p-3 text-sm text-rose-300">
+        <div className="alert-error">
           {error}
         </div>
       )}
@@ -344,8 +347,8 @@ export default function ReportsPage() {
                     {r.metrics?.avg != null ? `${r.metrics.avg.toFixed(0)}ms` : '—'}
                   </td>
                   <td
-                    className={`px-3 py-2 font-mono text-xs ${
-                      (r.metrics?.errorRate || 0) > 0 ? 'text-rose-300' : 'text-slate-400'
+                    className={`px-3 py-2 font-mono text-xs font-semibold ${
+                      (r.metrics?.errorRate || 0) > 0 ? 'text-rose-600' : 'text-ink-600'
                     }`}
                   >
                     {r.metrics
@@ -364,11 +367,11 @@ export default function ReportsPage() {
                   <td className="px-3 py-2 text-xs">
                     {r.thresholds?.total ? (
                       <span
-                        className={
+                        className={`font-mono font-semibold ${
                           (r.thresholds.failed || 0) > 0
-                            ? 'text-rose-300'
-                            : 'text-emerald-300'
-                        }
+                            ? 'text-rose-600'
+                            : 'text-emerald-600'
+                        }`}
                       >
                         {r.thresholds.passed}✓ / {r.thresholds.failed}✗
                       </span>
@@ -381,25 +384,24 @@ export default function ReportsPage() {
                   </td>
                   <td className="px-3 py-2 text-right">
                     <div className="inline-flex flex-wrap gap-1 justify-end">
-                      <Link
-                        to={`/reports/${r.id}`}
-                        className="rounded-md bg-brand-500/15 px-2 py-1 text-[11px] font-medium text-brand-200 hover:bg-brand-500/25"
-                      >
+                      <Link to={`/reports/${r.id}`} className="pill-primary">
                         View
                       </Link>
                       <a
                         href={reportsApi.reportDownloadUrl(r.id)}
-                        className="rounded-md bg-slate-700/60 px-2 py-1 text-[11px] font-medium text-slate-200 hover:bg-slate-700"
+                        className="pill-neutral"
                       >
                         Download
                       </a>
-                      <button
-                        type="button"
-                        onClick={() => setPendingDelete(r)}
-                        className="rounded-md bg-rose-500/15 px-2 py-1 text-[11px] font-medium text-rose-200 hover:bg-rose-500/25"
-                      >
-                        Delete
-                      </button>
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => setPendingDelete(r)}
+                          className="pill-danger"
+                        >
+                          Delete
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

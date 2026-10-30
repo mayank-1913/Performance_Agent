@@ -5,6 +5,7 @@ const { v4: uuidv4 } = require('uuid');
 const ApiError = require('../../utils/ApiError');
 const logger = require('../../config/logger');
 const store = require('./environments.store');
+const { isAdmin, ownerIdFor, canSee } = require('../auth/ownership');
 const { maskToken } = require('../../utils/secrets');
 const { validateEnvironment, SECRET_KEY_RE } = require('./environments.validator');
 
@@ -81,6 +82,7 @@ async function uploadEnvironment(req, res, next) {
       summary: summarize(parsed, validation.variables),
       validation: { issues: validation.issues, variables: validation.variables },
       raw: parsed, // kept in memory only
+      ownerUserId: ownerIdFor(req),
     };
     store.add(record);
 
@@ -98,13 +100,16 @@ async function uploadEnvironment(req, res, next) {
   }
 }
 
-function listEnvironments(_req, res) {
-  res.json({ success: true, data: store.list().map(publicView) });
+function listEnvironments(req, res) {
+  const items = isAdmin(req) ? store.list() : store.listByOwner(req.user.id);
+  res.json({ success: true, data: items.map(publicView) });
 }
 
 function getEnvironment(req, res, next) {
   const record = store.get(req.params.id);
-  if (!record) return next(ApiError.notFound('Environment not found'));
+  if (!record || !canSee(req, record)) {
+    return next(ApiError.notFound('Environment not found'));
+  }
   res.json({ success: true, data: publicView(record) });
 }
 
@@ -116,6 +121,7 @@ function getEnvironment(req, res, next) {
 function deleteEnvironment(req, res, next) {
   try {
     const record = store.get(req.params.id);
+    // Route is admin-only; this covers "admin asks for a nonexistent id".
     if (!record) return next(ApiError.notFound('Environment not found'));
 
     const scriptsStore = require('../scripts/scripts.store');

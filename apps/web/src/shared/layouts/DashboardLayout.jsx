@@ -47,6 +47,15 @@ function Icon({ name, className = 'h-[18px] w-[18px]' }) {
           <rect x="17" y="13" width="3" height="4" rx="0.5" />
         </svg>
       );
+    case 'users':
+      return (
+        <svg {...common}>
+          <circle cx="9" cy="8" r="4" />
+          <path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" />
+          <circle cx="17" cy="9" r="3" />
+          <path d="M21 20c0-2.5-2-4.5-4.5-4.5" />
+        </svg>
+      );
     case 'logout':
       return (
         <svg {...common}>
@@ -60,11 +69,14 @@ function Icon({ name, className = 'h-[18px] w-[18px]' }) {
   }
 }
 
-const navItems = [
+const BASE_NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: 'dashboard', end: true },
   { to: '/collections', label: 'Collections', icon: 'collections' },
   { to: '/runs', label: 'Runs', icon: 'runs' },
   { to: '/reports', label: 'Reports', icon: 'reports' },
+];
+const ADMIN_NAV_ITEMS = [
+  { to: '/admin/users', label: 'Users', icon: 'users', adminOnly: true },
 ];
 
 const PAGE_TITLES = {
@@ -77,6 +89,10 @@ const PAGE_TITLES = {
   '/reports': {
     title: 'Reports',
     subtitle: 'Performance analytics across every executed run.',
+  },
+  '/admin/users': {
+    title: 'Users',
+    subtitle: 'Admin-only. Create normal users and manage access.',
   },
 };
 
@@ -101,6 +117,8 @@ export default function DashboardLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const header = findHeader(location.pathname);
+  const navItems =
+    user?.role === 'admin' ? [...BASE_NAV_ITEMS, ...ADMIN_NAV_ITEMS] : BASE_NAV_ITEMS;
 
   const onLogout = () => {
     logout();
@@ -108,8 +126,8 @@ export default function DashboardLayout() {
   };
 
   return (
-    <div className="flex min-h-screen w-full overflow-x-hidden">
-      <aside className="sidebar-shell hidden md:flex md:w-[260px] md:shrink-0 md:flex-col px-5 py-6">
+    <div className="flex min-h-screen lg:h-screen w-full overflow-x-hidden lg:overflow-hidden">
+      <aside className="sidebar-shell hidden md:flex md:w-[260px] md:shrink-0 md:flex-col px-5 py-6 lg:h-screen lg:overflow-y-auto">
         {/* Brand */}
         <div className="mb-9 flex items-center gap-3">
           <div className="relative flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-glow-soft accent-bg">
@@ -195,8 +213,8 @@ export default function DashboardLayout() {
         </div>
       </aside>
 
-      <main className="flex min-h-screen flex-1 flex-col min-w-0 overflow-x-hidden">
-        <header className="topbar px-5 py-4 md:px-10 md:py-6">
+      <main className="flex min-h-screen lg:min-h-0 lg:h-screen flex-1 flex-col min-w-0 overflow-x-hidden lg:overflow-hidden">
+        <header className="topbar px-5 py-4 md:px-10 md:py-6 lg:shrink-0">
           {/* Mobile nav (visible only on small screens) */}
           <div className="md:hidden mb-3 flex flex-wrap items-center gap-1.5">
             {navItems.map((item) => (
@@ -246,7 +264,7 @@ export default function DashboardLayout() {
           <div className="accent-divider mt-5" />
         </header>
 
-        <div className="page-container flex-1">
+        <div className="page-container flex-1 lg:min-h-0 lg:overflow-y-auto">
           <Outlet />
         </div>
       </main>

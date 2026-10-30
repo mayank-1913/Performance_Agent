@@ -40,7 +40,7 @@ export default function LiveConsole({ lines }) {
           {!autoScroll && (
             <button
               type="button"
-              className="text-brand-300 hover:underline"
+              className="text-brand-700 hover:underline"
               onClick={() => {
                 if (ref.current) {
                   ref.current.scrollTop = ref.current.scrollHeight;
@@ -56,21 +56,21 @@ export default function LiveConsole({ lines }) {
       </div>
       <div
         ref={ref}
-        className="h-[min(50vh,480px)] overflow-y-auto overflow-x-hidden rounded-md border border-slate-800 bg-slate-950 p-3 font-mono text-xs leading-relaxed"
+        className="h-[min(50vh,480px)] overflow-y-auto overflow-x-hidden rounded-lg border border-soft bg-[#f9fafb] p-3 font-mono text-xs leading-relaxed"
       >
         {lines.length === 0 && (
-          <div className="text-slate-600">Waiting for output…</div>
+          <div className="text-ink-600">Waiting for output…</div>
         )}
         {lines.map((l, i) => {
           const tone =
             l.stream === 'stderr'
-              ? 'text-rose-300'
+              ? 'text-rose-700'
               : l.stream === 'system'
               ? 'text-slate-400'
               : 'text-slate-200';
           return (
             <div key={i} className={`${tone} whitespace-pre-wrap break-words`}>
-              <span className="text-slate-600">[{l.ts?.slice(11, 19) || '--:--:--'}]</span>{' '}
+              <span className="text-ink-600">[{l.ts?.slice(11, 19) || '--:--:--'}]</span>{' '}
               <span className="text-slate-500">{l.stream}</span>{' '}
               <span>{l.line}</span>
             </div>

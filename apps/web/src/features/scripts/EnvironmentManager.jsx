@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { environmentsApi } from '../../shared/api/environments.api.js';
+import { useAuth } from '../../shared/auth/AuthContext.jsx';
 
 const MAX_MB = 10;
 
@@ -30,7 +31,7 @@ function ConfirmDeleteModal({ open, busy, name, onCancel, onConfirm }) {
             Cancel
           </button>
           <button
-            className="btn-primary !bg-rose-600 hover:!bg-rose-500"
+            className="btn-danger"
             onClick={onConfirm}
             disabled={busy}
           >
@@ -43,6 +44,8 @@ function ConfirmDeleteModal({ open, busy, name, onCancel, onConfirm }) {
 }
 
 export default function EnvironmentManager({ value, onChange }) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const inputRef = useRef(null);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -196,10 +199,10 @@ export default function EnvironmentManager({ value, onChange }) {
         >
           {uploading ? 'Uploading…' : '+ Upload Environment'}
         </button>
-        {value && (
+        {value && isAdmin && (
           <button
             type="button"
-            className="btn-secondary whitespace-nowrap !text-rose-300 !border-rose-800 hover:!bg-rose-950/40"
+            className="btn-danger-ghost whitespace-nowrap"
             onClick={() =>
               setPendingDelete({
                 id: value,
@@ -215,23 +218,23 @@ export default function EnvironmentManager({ value, onChange }) {
       </div>
 
       {listError && (
-        <div className="mt-3 rounded-md border border-rose-800 bg-rose-950/40 p-2 text-xs text-rose-300">
+        <div className="mt-3 alert-error">
           {listError}
         </div>
       )}
       {uploadError && (
-        <div className="mt-3 rounded-md border border-rose-800 bg-rose-950/40 p-2 text-xs text-rose-300">
+        <div className="mt-3 alert-error">
           {uploadError}
         </div>
       )}
       {!uploadError && lastUploadedName && (
-        <div className="mt-3 rounded-md border border-emerald-700/50 bg-emerald-500/10 p-2 text-xs text-emerald-300">
+        <div className="mt-3 alert-success">
           Uploaded and selected: <span className="font-medium">{lastUploadedName}</span>
         </div>
       )}
 
       {deleteError && (
-        <div className="mt-3 rounded-md border border-rose-800 bg-rose-950/40 p-2 text-xs text-rose-300">
+        <div className="mt-3 alert-error">
           {deleteError}
         </div>
       )}
@@ -258,7 +261,7 @@ function ValidationIssues({ issues }) {
   return (
     <div className="space-y-2">
       {errors.length > 0 && (
-        <div className="rounded-md border border-rose-800 bg-rose-950/40 p-3 text-xs text-rose-300">
+        <div className="alert-error">
           <div className="font-semibold">Errors</div>
           <ul className="mt-1 list-disc pl-4">
             {errors.map((i, idx) => (
@@ -268,7 +271,7 @@ function ValidationIssues({ issues }) {
         </div>
       )}
       {warnings.length > 0 && (
-        <div className="rounded-md border border-amber-700/50 bg-amber-500/10 p-3 text-xs text-amber-300">
+        <div className="rounded-md border border-amber-200 bg-amber-500/10 p-3 text-xs text-amber-700">
           <div className="font-semibold">Warnings</div>
           <ul className="mt-1 list-disc pl-4">
             {warnings.map((i, idx) => (
@@ -284,7 +287,7 @@ function ValidationIssues({ issues }) {
 function EnvironmentDetailsPanel({ details, error }) {
   if (error) {
     return (
-      <div className="mt-4 rounded-md border border-rose-800 bg-rose-950/40 p-3 text-sm text-rose-300">
+      <div className="mt-4 alert-error">
         {error}
       </div>
     );
@@ -298,7 +301,7 @@ function EnvironmentDetailsPanel({ details, error }) {
 
   return (
     <div className="mt-4 space-y-3">
-      <div className="rounded-md border border-slate-800 bg-slate-900/40 p-3 text-sm">
+      <div className="rounded-lg border border-soft bg-gray-50 p-3 text-sm">
         <div className="flex items-center justify-between">
           <div>
             <div className="font-semibold text-slate-100">{details.summary?.name}</div>
@@ -339,12 +342,12 @@ function EnvironmentDetailsPanel({ details, error }) {
                   {v.hasValue ? (
                     v.value || (v.secret ? <span className="text-slate-500">****</span> : '')
                   ) : (
-                    <span className="text-slate-600">— empty —</span>
+                    <span className="text-ink-600">— empty —</span>
                   )}
                 </td>
                 <td className="px-3 py-1.5">
                   {v.secret ? (
-                    <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-amber-300">
+                    <span className="rounded bg-amber-50 px-1.5 py-0.5 text-amber-700">
                       sensitive
                     </span>
                   ) : (

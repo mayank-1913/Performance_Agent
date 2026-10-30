@@ -6,6 +6,41 @@ const scriptsStore = require('../scripts/scripts.store');
 const reportsStore = require('../reports/reports.store');
 const collectionsStore = require('../collections/collections.store');
 const environmentsStore = require('../environments/environments.store');
+const { isAdmin, canSee } = require('../auth/ownership');
+
+/**
+ * Load a script by id and enforce visibility. USER can only reach their own
+ * scripts; ADMIN sees everything. Throws 404 so cross-user access doesn't
+ * reveal that an id exists.
+ */
+function getOwnedScript(req, scriptId) {
+  const script = scriptsStore.get(scriptId);
+  if (!script || !canSee(req, script)) {
+    throw ApiError.notFound('Script not found');
+  }
+  return script;
+}
+
+/**
+ * Load a run (live or persisted) and enforce visibility against its backing
+ * script (for live runs) and persisted manifest ownerUserId.
+ */
+function getOwnedRun(req, runId) {
+  const live = lifecycle.get(runId);
+  if (live) {
+    const script = live.scriptId ? scriptsStore.get(live.scriptId) : null;
+    // The run manifest the dashboard displays is derived from the script,
+    // so the script's owner is the authoritative owner for live runs.
+    if (script && !canSee(req, script)) return { kind: 'notFound' };
+    return { kind: 'live', ctx: live, script };
+  }
+  const persisted = reportsStore.get(runId);
+  if (persisted) {
+    if (!canSee(req, persisted)) return { kind: 'notFound' };
+    return { kind: 'persisted', manifest: persisted };
+  }
+  return { kind: 'notFound' };
+}
 const { parse } = require('../../lib/postman/parser');
 const { credentialSourceNames, extractLoginCredentialBindings } = require('../../lib/postman/loginCredentials');
 const { toEnvName } = require('../../lib/k6/generator');
@@ -212,6 +247,23 @@ function removeLoginCredentialSources(script, cleanEnv, cleanSecrets) {
 /* ------------------------------------------------------------------ */
 
 /**
+ * Token-shaped env var names that the envInjector mirror will populate
+ * from a manual AUTH_TOKEN at spawn time. When the user pastes a manual
+ * token we treat every one of these as satisfied in the required-env
+ * check, otherwise collection-only runs that reference e.g.
+ * `{{global_auth_token}}` are falsely blocked with MISSING_ENV_VARS
+ * even though the mirror will set GLOBAL_AUTH_TOKEN before K6 spawns.
+ *
+ * Keep in lockstep with envInjector.buildK6Env / generator.TOKEN_NAME_RE.
+ * SESSION / API_KEY are deliberately excluded — those are different
+ * runtime slots the mirror never touches.
+ */
+const TOKEN_SHAPED_ENV_NAME_RE = /(?:TOKEN|JWT|AUTH|BEARER)/;
+function isTokenShapedEnvName(name) {
+  return typeof name === 'string' && TOKEN_SHAPED_ENV_NAME_RE.test(name);
+}
+
+/**
  * Detect which runtime variables are non-empty manual overrides. Any key the
  * user typed a non-empty value for is treated as a locked override and must
  * win over collection / environment / runtime-extracted values.
@@ -237,6 +289,13 @@ function detectManualOverrides(env, secrets) {
  * Sanitize an env object: drop empty values, normalize Bearer for token-ish
  * keys. Manual values flow through this without being filtered against any
  * allow-list — the user entering a key constitutes consent for that key.
+ *
+ * Exception: `AUTH_HEADER_VALUE` is the user-provided *complete*
+ * Authorization header value. We preserve it exactly as the user typed it
+ * (no trim, no Bearer-prefix handling, no case folding). The user is
+ * responsible for the entire header value, including scheme. Empty values
+ * are still dropped so a stray empty field doesn't produce an empty
+ * Authorization header on the wire.
  */
 function sanitizeManualEnv(input) {
   const out = {};
@@ -245,6 +304,12 @@ function sanitizeManualEnv(input) {
     if (raw == null) continue;
     if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(k)) continue;
     let v = String(raw);
+    if (v.length === 0) continue;
+    if (k === 'AUTH_HEADER_VALUE') {
+      // Verbatim preservation — DO NOT trim, DO NOT strip Bearer.
+      out[k] = v;
+      continue;
+    }
     if (v.trim().length === 0) continue;
     if (k === 'AUTH_TOKEN' || k === 'JWT_TOKEN') {
       v = normalizeBearer(v);
@@ -271,13 +336,16 @@ async function prepare(req, res, next) {
     } = req.body || {};
     if (!scriptId) throw ApiError.badRequest('scriptId is required');
 
-    const script = scriptsStore.get(scriptId);
-    if (!script) throw ApiError.notFound('Script not found');
+    const script = getOwnedScript(req, scriptId);
 
     const cleanEnv = sanitizeManualEnv(env);
     const cleanSecrets = sanitizeManualEnv(secrets);
-    if (typeof authToken === 'string' && authToken.trim().length > 0) {
-      cleanSecrets.AUTH_TOKEN = normalizeBearer(authToken);
+    // The `authToken` convenience alias is the UI's "Authorization Header
+    // Value" field. It is forwarded VERBATIM — no Bearer prefix handling,
+    // no trim, no case folding, no scheme coercion. The user supplied the
+    // complete header value and the agent must send it exactly.
+    if (typeof authToken === 'string' && authToken.length > 0) {
+      cleanSecrets.AUTH_HEADER_VALUE = authToken;
     }
 
     const credentialInfo = applyCredentialDataset(
@@ -309,10 +377,20 @@ async function prepare(req, res, next) {
     removeLoginCredentialSources(script, previewEnv, previewSecrets);
 
     const chainEnabled = script.authFlow?.enabled === true;
+    const manualAuthTokenPrep =
+      !!cleanSecrets.AUTH_TOKEN || !!cleanEnv.AUTH_TOKEN;
+    const manualAuthHeaderValuePrep =
+      !!cleanSecrets.AUTH_HEADER_VALUE || !!cleanEnv.AUTH_HEADER_VALUE;
+    const manualAuthSatisfiesPrep = manualAuthTokenPrep || manualAuthHeaderValuePrep;
     const merged = { ...previewEnv, ...previewSecrets };
-    const expected = (script.expectedEnvVars || []).filter(
-      (k) => !(chainEnabled && k === 'AUTH_TOKEN')
-    );
+    const expected = (script.expectedEnvVars || []).filter((k) => {
+      if (chainEnabled && k === 'AUTH_TOKEN') return false;
+      // Mirror start()'s treatment: a manual Authorization value (verbatim
+      // AUTH_HEADER_VALUE or token-shaped AUTH_TOKEN) satisfies every
+      // token-shaped expected var at K6 spawn time.
+      if (manualAuthSatisfiesPrep && isTokenShapedEnvName(k)) return false;
+      return true;
+    });
     const missing = expected.filter((v) => {
       const val = merged[v];
       return val == null || String(val).length === 0;
@@ -370,14 +448,14 @@ async function start(req, res, next) {
     } = req.body || {};
     if (!scriptId) throw ApiError.badRequest('scriptId is required');
 
-    const script = scriptsStore.get(scriptId);
-    if (!script) throw ApiError.notFound('Script not found');
+    const script = getOwnedScript(req, scriptId);
 
     const cleanEnv = sanitizeManualEnv(env);
     const cleanSecrets = sanitizeManualEnv(secrets);
-    // authToken is a convenience alias for secrets.AUTH_TOKEN
-    if (typeof authToken === 'string' && authToken.trim().length > 0) {
-      cleanSecrets.AUTH_TOKEN = normalizeBearer(authToken);
+    // authToken is the UI's "Authorization Header Value" field — forward
+    // verbatim with no normalization. See prepare() for rationale.
+    if (typeof authToken === 'string' && authToken.length > 0) {
+      cleanSecrets.AUTH_HEADER_VALUE = authToken;
     }
 
     const credentialInfo = applyCredentialDataset(
@@ -414,8 +492,18 @@ async function start(req, res, next) {
     //   resolver backfill is also considered satisfied.
     const chainEnabled = script.authFlow?.enabled === true;
     const manualAuthToken = !!cleanSecrets.AUTH_TOKEN || !!cleanEnv.AUTH_TOKEN;
+    const manualAuthHeaderValue =
+      !!cleanSecrets.AUTH_HEADER_VALUE || !!cleanEnv.AUTH_HEADER_VALUE;
+    const manualAuthSatisfies = manualAuthToken || manualAuthHeaderValue;
     const expected = (script.expectedEnvVars || []).filter((k) => {
-      if (k === 'AUTH_TOKEN' && (chainEnabled || manualAuthToken)) return false;
+      if (k === 'AUTH_TOKEN' && (chainEnabled || manualAuthSatisfies)) return false;
+      // When the user supplies a manual Authorization value (verbatim via
+      // AUTH_HEADER_VALUE, or token via AUTH_TOKEN), the K6 resolver uses
+      // it for every Authorization header the script emits, independent
+      // of the collection's placeholder name. Pre-filter token-shaped
+      // expected names so collection-only runs with a manual value
+      // aren't falsely blocked with MISSING_ENV_VARS at validation.
+      if (manualAuthSatisfies && isTokenShapedEnvName(k)) return false;
       return true;
     });
     const merged = { ...cleanEnv, ...cleanSecrets };
@@ -482,6 +570,18 @@ async function start(req, res, next) {
       chainEnabled,
     });
 
+    // Phase D.3.1 — D3-2 fix.
+    // Advertise which env keys came from the resolver-backfill vs. direct
+    // manual UI entry. The K6 runtime uses this marker to let a
+    // pre-request pm.environment.set(...) beat a backfilled env value
+    // while still letting a user-typed override beat a pm mutation.
+    const backfilledKeyList = backfilledEnvKeys
+      .concat(backfilledSecretKeys)
+      .filter((k) => k && !manualOverrides.includes(k));
+    if (backfilledKeyList.length > 0) {
+      cleanEnv.PA_BACKFILLED_ENV_KEYS = backfilledKeyList.join(',');
+    }
+
     const ctx = await lifecycle.start({
       script,
       env: cleanEnv,
@@ -493,7 +593,9 @@ async function start(req, res, next) {
       scriptId,
       manualOverrides,
       authSession: credentialInfo.plan,
-      providedAuth: cleanSecrets.AUTH_TOKEN
+      providedAuth: cleanSecrets.AUTH_HEADER_VALUE
+        ? maskToken(cleanSecrets.AUTH_HEADER_VALUE)
+        : cleanSecrets.AUTH_TOKEN
         ? maskToken(cleanSecrets.AUTH_TOKEN)
         : undefined,
       missingEnvVars: missing,
@@ -511,6 +613,8 @@ async function start(req, res, next) {
 /* ------------------------------------------------------------------ */
 function stop(req, res, next) {
   try {
+    const owned = getOwnedRun(req, req.params.runId);
+    if (owned.kind === 'notFound') throw ApiError.notFound('Run not found');
     const stopped = lifecycle.stop(req.params.runId, { reason: 'user' });
     if (!stopped) {
       const ctx = lifecycle.get(req.params.runId);
@@ -529,14 +633,24 @@ function stop(req, res, next) {
 /* ------------------------------------------------------------------ */
 /*  List / get run metadata                                            */
 /* ------------------------------------------------------------------ */
-function list(_req, res) {
+function list(req, res) {
   // Merge the live (active or recently finished, in-memory) runs with the
   // persisted manifests so post-restart history is visible too. Live runs
   // win on duplicates because they may still be updating.
-  const live = lifecycle.list().map(publicRun);
+  const admin = isAdmin(req);
+  const liveAll = lifecycle.list();
+  const live = liveAll
+    .filter((ctx) => {
+      if (admin) return true;
+      const script = ctx.scriptId ? scriptsStore.get(ctx.scriptId) : null;
+      return canSee(req, script);
+    })
+    .map(publicRun);
   const liveIds = new Set(live.map((r) => r.runId));
-  const persisted = reportsStore
-    .list()
+  const persistedAll = admin
+    ? reportsStore.list()
+    : reportsStore.listByOwner(req.user.id);
+  const persisted = persistedAll
     .filter((m) => !liveIds.has(m.runId))
     .map(persistedToPublicRun);
   const merged = [...live, ...persisted].sort((a, b) =>
@@ -546,26 +660,23 @@ function list(_req, res) {
 }
 
 function get(req, res, next) {
-  const ctx = lifecycle.get(req.params.runId);
-  if (ctx) return res.json({ success: true, data: publicRun(ctx) });
-  const persisted = reportsStore.get(req.params.runId);
-  if (persisted) return res.json({ success: true, data: persistedToPublicRun(persisted) });
+  const owned = getOwnedRun(req, req.params.runId);
+  if (owned.kind === 'live') return res.json({ success: true, data: publicRun(owned.ctx) });
+  if (owned.kind === 'persisted') {
+    return res.json({ success: true, data: persistedToPublicRun(owned.manifest) });
+  }
   return next(ApiError.notFound('Run not found'));
 }
 
 function logs(req, res, next) {
-  const ctx = lifecycle.get(req.params.runId);
-  if (ctx) {
+  const owned = getOwnedRun(req, req.params.runId);
+  if (owned.kind === 'live') {
     return res.json({
       success: true,
-      data: { runId: ctx.runId, lines: lifecycle.getLogs(ctx.runId) },
+      data: { runId: owned.ctx.runId, lines: lifecycle.getLogs(owned.ctx.runId) },
     });
   }
-  // Fallback: persisted runs don't have an in-memory ring buffer, but the API
-  // exposes a separate /reports/:id/logs endpoint that reads the on-disk file.
-  // We keep this endpoint behavior but return an empty list so existing UI
-  // calls during a fresh boot don't 404.
-  if (reportsStore.get(req.params.runId)) {
+  if (owned.kind === 'persisted') {
     return res.json({ success: true, data: { runId: req.params.runId, lines: [] } });
   }
   return next(ApiError.notFound('Run not found'));
@@ -576,8 +687,9 @@ function logs(req, res, next) {
 /* ------------------------------------------------------------------ */
 function stream(req, res, next) {
   const { runId } = req.params;
-  const ctx = lifecycle.get(runId);
-  if (!ctx) return next(ApiError.notFound('Run not found'));
+  const owned = getOwnedRun(req, runId);
+  if (owned.kind !== 'live') return next(ApiError.notFound('Run not found'));
+  const ctx = owned.ctx;
 
   res.set({
     'Content-Type': 'text/event-stream',
@@ -704,9 +816,10 @@ function persistedToPublicRun(m) {
 
 async function summary(req, res, next) {
   try {
-    const ctx = lifecycle.get(req.params.runId);
-    const persisted = !ctx ? reportsStore.get(req.params.runId) : null;
-    if (!ctx && !persisted) throw ApiError.notFound('Run not found');
+    const owned = getOwnedRun(req, req.params.runId);
+    if (owned.kind === 'notFound') throw ApiError.notFound('Run not found');
+    const ctx = owned.kind === 'live' ? owned.ctx : null;
+    const persisted = owned.kind === 'persisted' ? owned.manifest : null;
     if (ctx && (ctx.status === 'queued' || ctx.status === 'running')) {
       return res.json({
         success: true,
@@ -748,9 +861,10 @@ async function summary(req, res, next) {
 
 async function metrics(req, res, next) {
   try {
-    const ctx = lifecycle.get(req.params.runId);
-    const persisted = !ctx ? reportsStore.get(req.params.runId) : null;
-    if (!ctx && !persisted) throw ApiError.notFound('Run not found');
+    const owned = getOwnedRun(req, req.params.runId);
+    if (owned.kind === 'notFound') throw ApiError.notFound('Run not found');
+    const ctx = owned.kind === 'live' ? owned.ctx : null;
+    const persisted = owned.kind === 'persisted' ? owned.manifest : null;
     const report = await getReport(req.params.runId);
     if (!report) throw ApiError.notFound('No metrics available for this run');
     // Same additive normalization as above.
@@ -775,8 +889,10 @@ async function metrics(req, res, next) {
 
 async function report(req, res, next) {
   try {
-    const ctx = lifecycle.get(req.params.runId);
-    const persisted = !ctx ? reportsStore.get(req.params.runId) : null;
+    const owned = getOwnedRun(req, req.params.runId);
+    if (owned.kind === 'notFound') throw ApiError.notFound('Run not found');
+    const ctx = owned.kind === 'live' ? owned.ctx : null;
+    const persisted = owned.kind === 'persisted' ? owned.manifest : null;
     const reportPath = ctx?.artifacts?.reportHtmlPath || persisted?.artifacts?.reportHtmlPath;
     if (!reportPath) throw ApiError.notFound('No report file available');
     const wantDownload = String(req.query.download || '') === '1';

@@ -17,7 +17,23 @@ import { runsApi } from '../../shared/api/runs.api.js';
 
 // First-class secrets we surface up front. The user can also add arbitrary
 // custom keys via the "Custom overrides" editor below.
-const SECRET_KEYS = ['AUTH_TOKEN', 'JWT_TOKEN', 'SESSION_ID', 'HOST_PATH', 'API_KEY'];
+// AUTH_HEADER_VALUE is the user-provided *complete* Authorization header
+// value — passed to K6 verbatim. AUTH_TOKEN remains available for scripts
+// that specifically expect a raw token in an env var.
+const SECRET_KEYS = ['AUTH_HEADER_VALUE', 'AUTH_TOKEN', 'JWT_TOKEN', 'SESSION_ID', 'HOST_PATH', 'API_KEY'];
+// Human-readable labels for the first-class secrets. Keys without a custom
+// label fall back to the raw env name.
+const SECRET_LABELS = {
+  AUTH_HEADER_VALUE: 'Authorization Header Value',
+};
+const SECRET_HELP = {
+  AUTH_HEADER_VALUE:
+    'Enter the complete Authorization header value exactly as required by your API. Example: Bearer <token>. If your API requires only a raw token, enter the raw token without Bearer. The agent will not add or modify the authentication scheme.',
+};
+const SECRET_PLACEHOLDERS = {
+  AUTH_HEADER_VALUE: 'Bearer eyJhbGciOi...',
+  AUTH_TOKEN: 'eyJhbGciOi...',
+};
 const SECRET_FIELD = (k) =>
   /token|jwt|session|key|secret|auth|bearer|password/i.test(k);
 const RESERVED_KEYS = new Set(['PATH', 'Path', 'PATHEXT', 'SystemRoot', 'HOME', 'USERPROFILE', 'TEMP', 'TMP']);
@@ -52,7 +68,8 @@ export default function RunLauncher({
   const navigate = useNavigate();
   const [env, setEnv] = useState({});
   const [secrets, setSecrets] = useState({
-    AUTH_TOKEN: manualToken || '',
+    AUTH_HEADER_VALUE: manualToken || '',
+    AUTH_TOKEN: '',
     JWT_TOKEN: '',
     SESSION_ID: '',
     HOST_PATH: '',
@@ -65,10 +82,14 @@ export default function RunLauncher({
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState(null);
 
-  // If the parent passes an updated manualToken later, reflect it.
+  // If the parent passes an updated manualToken later, reflect it into
+  // the primary Authorization Header Value field.
   useEffect(() => {
     if (manualToken !== undefined) {
-      setSecrets((prev) => ({ ...prev, AUTH_TOKEN: manualToken || prev.AUTH_TOKEN }));
+      setSecrets((prev) => ({
+        ...prev,
+        AUTH_HEADER_VALUE: manualToken || prev.AUTH_HEADER_VALUE,
+      }));
     }
   }, [manualToken]);
 
@@ -138,16 +159,11 @@ export default function RunLauncher({
     return out;
   }, [env, secrets, customRows]);
 
-  // Detect tokens the user pasted with a "Bearer " prefix so we can show a
-  // helpful hint that the system will normalize the Authorization header.
-  const bearerPrefixed = useMemo(() => {
-    const out = [];
-    for (const k of ['AUTH_TOKEN', 'JWT_TOKEN']) {
-      const v = secrets[k];
-      if (typeof v === 'string' && /^\s*Bearer\s+/i.test(v)) out.push(k);
-    }
-    return out;
-  }, [secrets]);
+  // Reserved for future validation hints. The Authorization Header Value
+  // is sent to the API verbatim, so we deliberately do NOT warn about
+  // Bearer prefixes anymore — the user is responsible for the exact
+  // header value.
+  const bearerPrefixed = useMemo(() => [], []);
 
   const onStart = async (force = false) => {
     setStarting(true);
@@ -164,9 +180,20 @@ export default function RunLauncher({
         if (SECRET_FIELD(r.key)) customSecrets[r.key] = r.value;
         else customEnv[r.key] = r.value;
       }
+      // AUTH_HEADER_VALUE is sent via the dedicated `authToken` convenience
+      // field so the backend's verbatim contract is applied. We deliberately
+      // use `.length > 0` (not hasValue) so a leading/trailing-whitespace
+      // header the user intentionally typed is preserved exactly.
+      const authHeaderValue =
+        typeof secrets.AUTH_HEADER_VALUE === 'string' &&
+        secrets.AUTH_HEADER_VALUE.length > 0
+          ? secrets.AUTH_HEADER_VALUE
+          : undefined;
       const cleanedSecrets = {
         ...Object.fromEntries(
-          Object.entries(secrets).filter(([, v]) => hasValue(v))
+          Object.entries(secrets)
+            .filter(([k]) => k !== 'AUTH_HEADER_VALUE')
+            .filter(([, v]) => hasValue(v))
         ),
         ...customSecrets,
       };
@@ -176,6 +203,7 @@ export default function RunLauncher({
         scriptId: script.id,
         env: cleanedEnv,
         secrets: cleanedSecrets,
+        authToken: authHeaderValue,
         force,
         credentialDataset: credentialDataset || undefined,
         credentialReuse: credentialReuse || undefined,
@@ -203,7 +231,7 @@ export default function RunLauncher({
     <div className="card">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="text-sm font-semibold text-slate-900">Run test</h3>
+          <h3 className="text-sm font-semibold text-ink-900">Run test</h3>
           <p className="mt-1 text-xs text-soft">
             Provide runtime env vars. Manual values you type here are{' '}
             <span className="font-semibold text-amber-700">locked overrides</span> and always
@@ -224,12 +252,11 @@ export default function RunLauncher({
           <div className="mt-1">
             The login API will run before iterations and the extracted token
             will be injected into dependent requests automatically.{' '}
-            {activeOverrides.has('AUTH_TOKEN') ? (
+            {activeOverrides.has('AUTH_HEADER_VALUE') || activeOverrides.has('AUTH_TOKEN') ? (
               <>
-                You provided a manual{' '}
-                <code className="font-semibold text-emerald-900">AUTH_TOKEN</code> — it will
-                shadow the runtime-extracted token for every request that
-                needs auth.
+                You provided a manual Authorization value — it will shadow
+                the runtime-extracted token for every request that needs
+                auth.
               </>
             ) : (
               <>
@@ -277,26 +304,26 @@ export default function RunLauncher({
       )}
 
       <div className="mt-4">
-        <div className="label">Secrets (optional unless required by script)</div>
-        <p className="text-[11px] text-soft mt-0 mb-2">
-          Tokens may be pasted with or without the <code>Bearer </code>{' '}
-          prefix; the system normalizes Authorization headers automatically so
-          you'll never end up with <code>Bearer Bearer ey…</code>.
-        </p>
+        <div className="label">Authorization &amp; secrets (optional unless required by script)</div>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {SECRET_KEYS.map((k) => {
             const required = expectedSecretKeys.includes(k);
             const isMissing = required && missingSecrets.includes(k);
             const overridden = activeOverrides.has(k);
+            const label = SECRET_LABELS[k] || k;
+            const help = SECRET_HELP[k];
             return (
               <div key={k}>
                 <label className="flex items-center text-xs text-soft">
-                  <span>{k}</span>
+                  <span>{label}</span>
                   {overridden && <OverrideBadge />}
                   {required && (
                     <span className="ml-2 font-semibold text-amber-700">required</span>
                   )}
                 </label>
+                {help && (
+                  <p className="mt-0.5 text-[11px] leading-snug text-soft">{help}</p>
+                )}
                 <input
                   type="password"
                   autoComplete="off"
@@ -306,25 +333,16 @@ export default function RunLauncher({
                     isMissing ? 'border-amber-600 focus:border-amber-500' : '',
                     overridden ? 'border-amber-500/50' : '',
                   ].join(' ')}
-                  value={secrets[k]}
+                  value={secrets[k] || ''}
                   onChange={(e) => setSecrets({ ...secrets, [k]: e.target.value })}
-                  placeholder={k === 'AUTH_TOKEN' ? 'eyJhbGciOi...' : ''}
-                  aria-label={k}
+                  placeholder={SECRET_PLACEHOLDERS[k] || ''}
+                  aria-label={label}
                 />
               </div>
             );
           })}
         </div>
       </div>
-
-      {bearerPrefixed.length > 0 && (
-        <div className="mt-3 rounded-md border border-sky-600 bg-sky-50 p-2.5 text-[11px] text-sky-800">
-          {bearerPrefixed.join(', ')} starts with{' '}
-          <code className="font-semibold text-sky-900">Bearer </code> — the prefix will be
-          stripped before storage and re-added exactly once on the
-          Authorization header.
-        </div>
-      )}
 
       {/* Custom overrides — any key the user wants to lock for this run. */}
       <div className="mt-5">
@@ -425,7 +443,7 @@ export default function RunLauncher({
       )}
 
       {error && (
-        <div className="mt-3 rounded-md border border-rose-800 bg-rose-950/40 p-3 text-sm text-rose-300">
+        <div className="mt-3 alert-error">
           {error}
         </div>
       )}

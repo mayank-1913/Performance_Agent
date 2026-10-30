@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { reportsApi } from '../../shared/api/reports.api.js';
+import { useAuth } from '../../shared/auth/AuthContext.jsx';
 import RunStatusBadge from '../runs/RunStatusBadge.jsx';
 import { PanelLoader } from '../../shared/components/Loading.jsx';
 
@@ -19,12 +20,12 @@ function CollapsibleCard({ title, subtitle, defaultOpen = true, children }) {
         className="flex w-full items-center justify-between text-left"
       >
         <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-slate-200">{title}</h3>
+          <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
           {subtitle && (
-            <p className="text-xs text-slate-500 mt-0.5 force-wrap">{subtitle}</p>
+            <p className="text-xs text-gray-700 mt-0.5 force-wrap">{subtitle}</p>
           )}
         </div>
-        <span className="text-xs text-slate-400 shrink-0 ml-2">{open ? '▾' : '▸'}</span>
+        <span className="text-xs text-gray-600 shrink-0 ml-2">{open ? '▾' : '▸'}</span>
       </button>
       {open && <div className="mt-3">{children}</div>}
     </div>
@@ -33,9 +34,9 @@ function CollapsibleCard({ title, subtitle, defaultOpen = true, children }) {
 
 function MetaCell({ label, value }) {
   return (
-    <div className="rounded-md border border-slate-700 bg-slate-800 p-3 min-w-0">
-      <div className="text-[11px] uppercase tracking-wide text-slate-500">{label}</div>
-      <div className="mt-1 text-sm text-slate-100 force-wrap font-mono">{value ?? '—'}</div>
+    <div className="rounded-md border border-gray-200 bg-gray-50 p-3 min-w-0">
+      <div className="text-[11px] uppercase tracking-wide text-gray-600">{label}</div>
+      <div className="mt-1 text-sm text-gray-900 force-wrap font-mono">{value ?? '—'}</div>
     </div>
   );
 }
@@ -57,6 +58,8 @@ export default function ReportDetailPage() {
   const [tab, setTab] = useState('report');
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
     let mounted = true;
@@ -109,7 +112,7 @@ export default function ReportDetailPage() {
   if (loading) return <div className="card text-sm text-slate-400">Loading report…</div>;
   if (error) {
     return (
-      <div className="card text-sm text-rose-300">
+      <div className="card text-sm text-rose-700">
         {error}{' '}
         <Link to="/reports" className="ml-2 underline">
           Back to reports
@@ -164,24 +167,26 @@ export default function ReportDetailPage() {
             <a className="btn-primary" href={reportsApi.reportDownloadUrl(id)}>
               Download
             </a>
-            <button
-              type="button"
-              className="btn-secondary !bg-rose-600/20 !border-rose-700/60 !text-rose-200 hover:!bg-rose-600/30"
-              onClick={() => setConfirming(true)}
-            >
-              Delete
-            </button>
+            {isAdmin && (
+              <button
+                type="button"
+                className="btn-danger-ghost"
+                onClick={() => setConfirming(true)}
+              >
+                Delete
+              </button>
+            )}
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
           {headline.map((h) => (
             <MetaCell key={h.label} label={h.label} value={String(h.value)} />
           ))}
         </div>
       </div>
 
-      <div className="border-b border-slate-800">
+      <div className="border-b border-soft">
         <div className="flex flex-wrap gap-1">
           {TABS.map((t) => (
             <button
@@ -191,7 +196,7 @@ export default function ReportDetailPage() {
               className={[
                 'px-3 py-2 text-sm font-medium transition-colors -mb-px border-b-2',
                 tab === t.id
-                  ? 'border-brand-500 text-brand-200'
+                  ? 'border-brand-500 text-brand-700'
                   : 'border-transparent text-slate-400 hover:text-slate-200',
               ].join(' ')}
             >
@@ -312,7 +317,7 @@ export default function ReportDetailPage() {
                 Cancel
               </button>
               <button
-                className="btn-primary !bg-rose-600 hover:!bg-rose-500"
+                className="btn-danger"
                 onClick={onDelete}
                 disabled={deleting}
               >

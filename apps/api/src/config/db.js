@@ -37,6 +37,7 @@ function getDb() {
   _db.pragma('foreign_keys = ON');
   migrate(_db);
   seedAdmin(_db);
+  backfillOwners(_db);
   logger.info('SQLite ready', { path: dbPath });
   return _db;
 }
@@ -154,9 +155,44 @@ const SCHEMA_STATEMENTS = [
 
 function migrate(db) {
   db.exec(SCHEMA_STATEMENTS.join(';\n'));
+  // Phase 9: multi-user ownership. Add owner_user_id to resource tables
+  // non-destructively. ALTER TABLE ADD COLUMN is idempotent-guarded by
+  // inspecting pragma output so this migration is safe on every boot
+  // (dev-local DB, VM production DB, future fresh DBs).
+  const OWNED_TABLES = ['collections', 'environments', 'scripts', 'reports'];
+  for (const table of OWNED_TABLES) {
+    const cols = db.prepare(`PRAGMA table_info(${table})`).all();
+    const hasOwner = cols.some((c) => c.name === 'owner_user_id');
+    if (!hasOwner) {
+      db.exec(`ALTER TABLE ${table} ADD COLUMN owner_user_id TEXT`);
+    }
+    db.exec(
+      `CREATE INDEX IF NOT EXISTS idx_${table}_owner_user_id ` +
+        `ON ${table} (owner_user_id)`
+    );
+  }
   db.prepare(
     'INSERT OR REPLACE INTO schema_meta(key,value) VALUES(?,?)'
-  ).run('version', '1');
+  ).run('version', '2');
+}
+
+/**
+ * One-time backfill: existing resource rows (uploaded / generated before this
+ * phase) have NULL owner_user_id. Assign them to the first admin so the data
+ * remains visible to ADMIN only — per the spec, we do NOT arbitrarily hand
+ * production data to a normal user. Idempotent: only touches NULLs.
+ */
+function backfillOwners(db) {
+  const admin = db
+    .prepare("SELECT id FROM users WHERE role = 'admin' ORDER BY created_at ASC LIMIT 1")
+    .get();
+  if (!admin) return;
+  const OWNED_TABLES = ['collections', 'environments', 'scripts', 'reports'];
+  for (const table of OWNED_TABLES) {
+    db.prepare(
+      `UPDATE ${table} SET owner_user_id = ? WHERE owner_user_id IS NULL`
+    ).run(admin.id);
+  }
 }
 
 /* ------------------------------------------------------------------ */

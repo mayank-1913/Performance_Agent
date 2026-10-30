@@ -45,10 +45,10 @@ export default function ScriptPreview({ code, downloadUrl }) {
         </div>
       </div>
 
-      <div className="mt-3 max-h-[60vh] overflow-y-auto overflow-x-hidden rounded-md border border-slate-800 bg-slate-950">
+      <div className="mt-3 max-h-[60vh] overflow-y-auto overflow-x-hidden rounded-lg border border-soft bg-[#f9fafb]">
         <pre
           className={[
-            'p-4 text-xs leading-relaxed text-slate-200',
+            'p-4 font-mono text-xs leading-relaxed text-ink-800',
             wrap ? 'whitespace-pre-wrap break-words' : 'overflow-x-auto whitespace-pre',
           ].join(' ')}
         >

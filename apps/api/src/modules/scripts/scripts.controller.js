@@ -8,6 +8,7 @@ const logger = require('../../config/logger');
 const collectionsStore = require('../collections/collections.store');
 const environmentsStore = require('../environments/environments.store');
 const scriptsStore = require('./scripts.store');
+const { isAdmin, ownerIdFor, canSee } = require('../auth/ownership');
 const { parse } = require('../../lib/postman/parser');
 const { detectAuth } = require('../../lib/postman/authDetector');
 const { sanitizeParsedCollection } = require('../../lib/postman/authSanitizer');
@@ -130,13 +131,17 @@ async function generate(req, res, next) {
     if (!collectionId) throw ApiError.badRequest('collectionId is required');
 
     const record = collectionsStore.get(collectionId);
-    if (!record) throw ApiError.notFound('Collection not found');
+    if (!record || !canSee(req, record)) {
+      throw ApiError.notFound('Collection not found');
+    }
 
     let environmentRaw = null;
     let environmentRecord = null;
     if (environmentId) {
       environmentRecord = environmentsStore.get(environmentId);
-      if (!environmentRecord) throw ApiError.notFound('Environment not found');
+      if (!environmentRecord || !canSee(req, environmentRecord)) {
+        throw ApiError.notFound('Environment not found');
+      }
       environmentRaw = environmentRecord.raw;
     }
 
@@ -338,6 +343,7 @@ async function generate(req, res, next) {
         acknowledgedBlocking:
           options.acknowledgeBlockingWarnings === true && compatibility.hasBlocking,
       },
+      ownerUserId: ownerIdFor(req),
     };
     scriptsStore.add(scriptRecord);
 
@@ -380,7 +386,7 @@ function publicScript(s) {
 async function getScript(req, res, next) {
   try {
     const s = scriptsStore.get(req.params.id);
-    if (!s) throw ApiError.notFound('Script not found');
+    if (!s || !canSee(req, s)) throw ApiError.notFound('Script not found');
     const code = await fs.readFile(s.filePath, 'utf-8');
     res.json({ success: true, data: { ...publicScript(s), code } });
   } catch (err) {
@@ -390,16 +396,22 @@ async function getScript(req, res, next) {
 
 function listScripts(req, res) {
   const { collectionId } = req.query;
-  const items = collectionId
-    ? scriptsStore.listByCollection(String(collectionId))
-    : scriptsStore.list();
+  const admin = isAdmin(req);
+  let items;
+  if (collectionId) {
+    items = admin
+      ? scriptsStore.listByCollection(String(collectionId))
+      : scriptsStore.listByCollectionAndOwner(String(collectionId), req.user.id);
+  } else {
+    items = admin ? scriptsStore.list() : scriptsStore.listByOwner(req.user.id);
+  }
   res.json({ success: true, data: items.map(publicScript) });
 }
 
 async function downloadScript(req, res, next) {
   try {
     const s = scriptsStore.get(req.params.id);
-    if (!s) throw ApiError.notFound('Script not found');
+    if (!s || !canSee(req, s)) throw ApiError.notFound('Script not found');
     res.setHeader('Content-Type', 'application/javascript');
     res.setHeader(
       'Content-Disposition',

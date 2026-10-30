@@ -42,7 +42,7 @@ export default function RunsPage() {
       </div>
 
       {error && (
-        <div className="rounded-md border border-rose-800 bg-rose-950/40 p-3 text-sm text-rose-300">
+        <div className="alert-error">
           {error}
         </div>
       )}
@@ -76,24 +76,24 @@ export default function RunsPage() {
             )}
             {!loading &&
               items.map((r) => (
-                <tr key={r.runId} className="hover:bg-slate-900/40">
-                  <td className="px-4 py-2 font-mono text-xs text-slate-300">
+                <tr key={r.runId} className="hover-row">
+                  <td className="px-4 py-2.5 font-mono text-xs text-ink-700">
                     {r.runId.slice(0, 8)}…
                   </td>
-                  <td className="px-4 py-2">
+                  <td className="px-4 py-2.5">
                     <RunStatusBadge status={r.status} />
                   </td>
-                  <td className="px-4 py-2 text-slate-400">
+                  <td className="px-4 py-2.5 text-xs text-ink-600">
                     {new Date(r.startedAt).toLocaleString()}
                   </td>
-                  <td className="px-4 py-2 text-slate-300">
+                  <td className="px-4 py-2.5 text-sm font-medium text-ink-900">
                     {r.durationMs != null ? `${(r.durationMs / 1000).toFixed(1)}s` : '—'}
                   </td>
-                  <td className="px-4 py-2 text-slate-300">{r.exitCode ?? '—'}</td>
+                  <td className="px-4 py-2.5 font-mono text-xs text-ink-700">{r.exitCode ?? '—'}</td>
                   <td className="px-4 py-2 text-right">
                     <Link
                       to={`/runs/${r.runId}`}
-                      className="inline-flex items-center rounded-md bg-brand-500/15 px-2.5 py-1 text-xs font-medium text-brand-200 hover:bg-brand-500/25"
+                      className="pill-primary"
                     >
                       Open
                     </Link>

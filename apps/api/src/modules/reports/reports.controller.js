@@ -6,6 +6,7 @@ const path = require('path');
 const ApiError = require('../../utils/ApiError');
 const logger = require('../../config/logger');
 const reportsStore = require('./reports.store');
+const { isAdmin, canSee } = require('../auth/ownership');
 
 function publicView(record) {
   if (!record) return null;
@@ -19,13 +20,16 @@ function publicView(record) {
   };
 }
 
-function listReports(_req, res) {
-  res.json({ success: true, data: reportsStore.list().map(publicView) });
+function listReports(req, res) {
+  const items = isAdmin(req)
+    ? reportsStore.list()
+    : reportsStore.listByOwner(req.user.id);
+  res.json({ success: true, data: items.map(publicView) });
 }
 
 function getReport(req, res, next) {
   const r = reportsStore.get(req.params.id);
-  if (!r) return next(ApiError.notFound('Report not found'));
+  if (!r || !canSee(req, r)) return next(ApiError.notFound('Report not found'));
   res.json({ success: true, data: publicView(r) });
 }
 
@@ -36,7 +40,7 @@ function getReport(req, res, next) {
 async function getMetrics(req, res, next) {
   try {
     const r = reportsStore.get(req.params.id);
-    if (!r) throw ApiError.notFound('Report not found');
+    if (!r || !canSee(req, r)) throw ApiError.notFound('Report not found');
     const p = r.artifacts?.parsedSummaryPath;
     if (!p || !fs.existsSync(p)) {
       throw ApiError.notFound('Parsed metrics not available for this report');
@@ -61,7 +65,7 @@ async function getMetrics(req, res, next) {
  */
 function getReportHtml(req, res, next) {
   const r = reportsStore.get(req.params.id);
-  if (!r) return next(ApiError.notFound('Report not found'));
+  if (!r || !canSee(req, r)) return next(ApiError.notFound('Report not found'));
   const p = r.artifacts?.reportHtmlPath;
   if (!p || !fs.existsSync(p)) {
     return next(ApiError.notFound('HTML report file not available'));
@@ -87,7 +91,7 @@ function getReportHtml(req, res, next) {
 async function getLogs(req, res, next) {
   try {
     const r = reportsStore.get(req.params.id);
-    if (!r) throw ApiError.notFound('Report not found');
+    if (!r || !canSee(req, r)) throw ApiError.notFound('Report not found');
     const p = r.artifacts?.logFilePath;
     if (!p || !fs.existsSync(p)) {
       return res.json({ success: true, data: { runId: r.runId, lines: [] } });

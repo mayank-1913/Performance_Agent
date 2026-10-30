@@ -222,12 +222,24 @@ function makeInterpolator({
       sources.push(`__resolveDynamicVar(${JSON.stringify(originalName)}, ${dynCacheArg})`);
       return sources;
     }
-    sources.push('__ENV.' + envName);
+    // Phase D.3.1 — D3-2 fix.
+    // When the pre-request script mutates this variable via
+    // pm.environment.set(...), the mutation must beat a backfilled static
+    // environment value (matching Postman semantics). We combine the
+    // __ENV lookup with the pm-state read through __envOrPmSet() so the
+    // runtime helper can resolve precedence per key (manual overrides
+    // still win via the PA_BACKFILLED_ENV_KEYS marker set).
+    if (pmSets.has(originalName)) {
+      sources.push(
+        '__envOrPmSet(' +
+          JSON.stringify(envName) +
+          ', __getPmVar(' + st + ', \'environment\', ' + JSON.stringify(originalName) + '))'
+      );
+    } else {
+      sources.push('__ENV.' + envName);
+    }
     if (pmLocalSets.has(originalName) && reqIdx >= 0) {
       sources.push('__getRequestLocal(' + st + ', ' + reqIdx + ', ' + JSON.stringify(originalName) + ')');
-    }
-    if (pmSets.has(originalName)) {
-      sources.push('__getPmVar(' + st + ', \'environment\', ' + JSON.stringify(originalName) + ')');
     }
     if (pmLocalSets.has(originalName)) {
       sources.push('__pmGet(' + st + ', \'variables\', ' + JSON.stringify(originalName) + ')');
@@ -955,6 +967,39 @@ function __coalesceVar(name, value) {
   return value;
 }
 
+// Phase D.3.1 — D3-2 fix.
+// Set of env keys the Perf Agent BACKFILLED from the Postman collection /
+// environment file at run start. For these keys a pre-request script's
+// pm.environment.set(...) mutation must beat the backfilled static value
+// (matching Postman's own runtime semantics). Manual UI-entered overrides
+// are NOT in this set, so they still beat pm mutations as before.
+const __PA_BACKFILLED_ENV_KEYS = (function () {
+  const raw = (typeof __ENV !== 'undefined' && __ENV.PA_BACKFILLED_ENV_KEYS) || '';
+  const set = new Set();
+  if (raw) {
+    const parts = String(raw).split(',');
+    for (let i = 0; i < parts.length; i++) {
+      const k = parts[i].trim();
+      if (k) set.add(k);
+    }
+  }
+  return set;
+})();
+
+function __envOrPmSet(envKey, pmValue) {
+  const envV = (typeof __ENV !== 'undefined') ? __ENV[envKey] : undefined;
+  const envHas = typeof envV === 'string' && envV.length > 0;
+  const pmHas = pmValue != null && String(pmValue).length > 0;
+  if (pmHas) {
+    // Pre-request mutation beats a backfilled env value; manual override
+    // (not in backfill set) still wins.
+    if (!envHas) return pmValue;
+    if (__PA_BACKFILLED_ENV_KEYS.has(envKey)) return pmValue;
+    return envV;
+  }
+  return envHas ? envV : '';
+}
+
 function __resolveJsonLiteral(name, value) {
   if (value == null || value === '' || value === 'undefined') return '__UNRESOLVED__' + String(name || '');
   if (value === 'null') return null;
@@ -1156,13 +1201,43 @@ let __manualOverrideLogged = false;
 `;
 
 /**
- * Emit-time inline: the manual-override branch shared by
+ * Emit-time inline: VERBATIM manual-override branch. When the user
+ * supplied a complete Authorization header value through the UI's
+ * "Authorization Header Value" field, we return it unchanged — no Bearer
+ * handling, no case folding, no scheme coercion. This runs BEFORE the
+ * legacy AUTH_TOKEN branch so a user-supplied verbatim header always
+ * wins. An unresolved placeholder is still rejected (otherwise a stale
+ * UI value like `Bearer {{token}}` would leak to the wire).
+ */
+const VERBATIM_HEADER_BRANCH_JS = `
+  if (__ENV.AUTH_HEADER_VALUE) {
+    if (!__hasUnresolvedPlaceholder(__ENV.AUTH_HEADER_VALUE)) {
+      if (!__manualOverrideLogged) {
+        __manualOverrideLogged = true;
+        console.log('[auth] manual Authorization header value active (verbatim)');
+      }
+      if (placeholder) {
+        console.log('[auth] placeholder replaced: {{' + placeholder + '}}');
+      }
+      return __ENV.AUTH_HEADER_VALUE;
+    }
+  }
+`;
+
+/**
+ * Emit-time inline: the legacy AUTH_TOKEN manual-override branch shared by
  * __resolveAuthHeader and __resolveAuthHeaderEnv. Guards the branch against
  * every unsafe manual value (unresolved placeholder, "undefined"/"null",
  * whitespace-only, lone "Bearer"). Falls through to the caller's own
  * runtime / fallback logic when the manual value is unsafe.
+ *
+ * Kept for backward compat with API consumers that pass secrets.AUTH_TOKEN
+ * directly and for env-file-defined AUTH_TOKEN values. The UI's
+ * "Authorization Header Value" field now routes through
+ * VERBATIM_HEADER_BRANCH_JS above instead of this branch.
  */
 const MANUAL_OVERRIDE_BRANCH_JS = `
+${VERBATIM_HEADER_BRANCH_JS}
   if (__ENV.AUTH_TOKEN) {
     // Phase 2 safety guards: skip the manual branch when the user-typed
     // value is unsafe (unresolved placeholder, or normalizes to empty
@@ -1289,11 +1364,15 @@ function __hasAnyAuth(data, fallback) {
   // "Any auth" means: either a safe manual token, or any runtime-captured
   // token. An unresolved-placeholder or "undefined"/"null" manual value
   // does NOT count as auth here, matching the resolver's own filtering.
+  const verbatimSafe = !!(
+    __ENV.AUTH_HEADER_VALUE &&
+    !__hasUnresolvedPlaceholder(__ENV.AUTH_HEADER_VALUE)
+  );
   const manualSafe = !!(
     __ENV.AUTH_TOKEN &&
     !__hasUnresolvedPlaceholder(__ENV.AUTH_TOKEN) &&
     __normalizeBearer(__ENV.AUTH_TOKEN)
-  );
+  ) || verbatimSafe;
   const runtime = state.AUTH_TOKEN || state.ACCESS_TOKEN || state.JWT || state.ID_TOKEN || '';
   const captured = state.vars && (
     state.vars.global_auth_token || state.vars.auth_token || state.vars.access_token ||
@@ -1314,16 +1393,12 @@ function __hasAnyAuth(data, fallback) {
  * UI token (__ENV.AUTH_TOKEN) overrides whatever placeholder the collection
  * used — the requirement is independent of the auth-flow detection.
  */
-const ENV_ONLY_HELPERS = `
-// ---- AUTH HEADER RESOLVER (env-only) --------------------------------------
-// Every Authorization header in this script is built via this function so a
-// manual __ENV.AUTH_TOKEN from the UI takes priority over whatever variable
-// name the collection happens to use ({{jwt_token}}, {{global_auth_token}},
-// {{access_token}}, …). The fallback argument carries the original
-// collection-defined value (already template-interpolated) so we don't lose
-// existing behaviour for users who don't set a manual token.
-${SHARED_BEARER_HELPERS_JS}
-
+// The env-only resolver function body, without the shared bearer helpers.
+// Used standalone (ENV_ONLY_HELPERS) when runtime chaining is OFF and as an
+// addendum (ENV_ONLY_RESOLVER_FN_ONLY) alongside RUNTIME_HELPERS so setup()
+// — which runs before `data` is initialised — can still resolve the login
+// request's Authorization header via __resolveAuthHeaderEnv.
+const ENV_ONLY_RESOLVER_FN_ONLY = `
 function __resolveAuthHeaderEnv(fallback, placeholder) {
 ${MANUAL_OVERRIDE_BRANCH_JS}
   if (typeof fallback === 'string' && fallback.length > 0) {
@@ -1336,6 +1411,18 @@ ${MANUAL_OVERRIDE_BRANCH_JS}
   }
   return '';
 }
+`;
+
+const ENV_ONLY_HELPERS = `
+// ---- AUTH HEADER RESOLVER (env-only) --------------------------------------
+// Every Authorization header in this script is built via this function so a
+// manual __ENV.AUTH_TOKEN from the UI takes priority over whatever variable
+// name the collection happens to use ({{jwt_token}}, {{global_auth_token}},
+// {{access_token}}, …). The fallback argument carries the original
+// collection-defined value (already template-interpolated) so we don't lose
+// existing behaviour for users who don't set a manual token.
+${SHARED_BEARER_HELPERS_JS}
+${ENV_ONLY_RESOLVER_FN_ONLY}
 // ---------------------------------------------------------------------------
 `;
 
@@ -1795,7 +1882,15 @@ function generateK6Script(parsed, options = {}) {
     : `// No {{variables}} referenced by the selected requests.`;
 
   // ── Section 07: Authentication Helpers ──────────────────────────────────
-  const runtimeHelpers = runtimeEnabled ? RUNTIME_HELPERS : '';
+  // When auth chaining is ON, setup() builds the login request with
+  // runtimeEnabled=false (data isn't initialised yet) and references
+  // __resolveAuthHeaderEnv. We append that function (without re-declaring
+  // the shared bearer helpers already present in RUNTIME_HELPERS) so the
+  // emitted script resolves at parse time instead of blowing up with a
+  // ReferenceError inside setup().
+  const runtimeHelpers = runtimeEnabled
+    ? RUNTIME_HELPERS + '\n' + ENV_ONLY_RESOLVER_FN_ONLY
+    : '';
   const envOnlyHelpers =
     !runtimeEnabled && (injectAuthToken || collectionHasAuthHeader)
       ? ENV_ONLY_HELPERS

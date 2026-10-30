@@ -39,6 +39,7 @@ function rowToRecord(row) {
     uploadedAt: row.uploaded_at,
     summary: row.summary_json ? JSON.parse(row.summary_json) : null,
     validation: row.validation_json ? JSON.parse(row.validation_json) : null,
+    ownerUserId: row.owner_user_id || null,
     _rawPath: row.raw_path || null,
   };
   Object.defineProperty(rec, 'raw', {
@@ -62,8 +63,8 @@ function add(record) {
     .prepare(
       `INSERT OR REPLACE INTO environments (
          id, original_name, mimetype, size_bytes, uploaded_at,
-         summary_json, validation_json, raw_path
-       ) VALUES (?,?,?,?,?,?,?,?)`
+         summary_json, validation_json, raw_path, owner_user_id
+       ) VALUES (?,?,?,?,?,?,?,?,?)`
     )
     .run(
       record.id,
@@ -73,7 +74,8 @@ function add(record) {
       record.uploadedAt || new Date().toISOString(),
       record.summary ? JSON.stringify(record.summary) : null,
       record.validation ? JSON.stringify(record.validation) : null,
-      rawPath
+      rawPath,
+      record.ownerUserId ?? null
     );
   return get(record.id);
 }
@@ -87,6 +89,15 @@ function list() {
   return getDb()
     .prepare('SELECT * FROM environments ORDER BY uploaded_at DESC')
     .all()
+    .map(rowToRecord);
+}
+
+function listByOwner(ownerUserId) {
+  return getDb()
+    .prepare(
+      'SELECT * FROM environments WHERE owner_user_id = ? ORDER BY uploaded_at DESC'
+    )
+    .all(ownerUserId)
     .map(rowToRecord);
 }
 
@@ -105,4 +116,4 @@ function remove(id) {
   return res.changes > 0;
 }
 
-module.exports = { add, get, list, remove };
+module.exports = { add, get, list, listByOwner, remove };

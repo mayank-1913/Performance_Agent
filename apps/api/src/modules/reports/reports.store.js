@@ -67,6 +67,7 @@ function rowToManifest(row) {
     },
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    ownerUserId: row.owner_user_id || null,
   };
 }
 
@@ -87,7 +88,7 @@ function add(manifest) {
         metrics_json, thresholds_json,
         artifacts_dir, summary_export_path, metrics_json_path,
         parsed_summary_path, report_html_path, log_file_path, script_file_path,
-        created_at, updated_at
+        created_at, updated_at, owner_user_id
       ) VALUES (
         @id, @run_id, @script_id, @status,
         @collection_id, @collection_name,
@@ -99,7 +100,7 @@ function add(manifest) {
         @metrics_json, @thresholds_json,
         @artifacts_dir, @summary_export_path, @metrics_json_path,
         @parsed_summary_path, @report_html_path, @log_file_path, @script_file_path,
-        @created_at, @updated_at
+        @created_at, @updated_at, @owner_user_id
       )`
     )
     .run({
@@ -136,6 +137,7 @@ function add(manifest) {
       script_file_path: a.scriptFilePath ?? null,
       created_at: manifest.createdAt || now,
       updated_at: now,
+      owner_user_id: manifest.ownerUserId ?? null,
     });
   _logger.info?.('Report row inserted', { id: manifest.id });
   return get(manifest.id);
@@ -162,9 +164,28 @@ function list() {
     .map(rowToManifest);
 }
 
+function listByOwner(ownerUserId) {
+  return getDb()
+    .prepare(
+      'SELECT * FROM reports WHERE owner_user_id = ? ORDER BY started_at DESC, created_at DESC'
+    )
+    .all(ownerUserId)
+    .map(rowToManifest);
+}
+
 function remove(id) {
   const res = getDb().prepare('DELETE FROM reports WHERE id = ? OR run_id = ?').run(id, id);
   return res.changes > 0;
 }
 
-module.exports = { configure, init, add, update, get, list, remove, setLogger };
+module.exports = {
+  configure,
+  init,
+  add,
+  update,
+  get,
+  list,
+  listByOwner,
+  remove,
+  setLogger,
+};

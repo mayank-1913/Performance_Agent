@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { collectionsApi } from '../../shared/api/collections.api.js';
 import { reportsApi } from '../../shared/api/reports.api.js';
+import { useAuth } from '../../shared/auth/AuthContext.jsx';
 import UploadCollectionModal from './UploadCollectionModal.jsx';
 
 function fmtDuration(ms) {
@@ -49,7 +50,7 @@ function ConfirmDeleteModal({ open, busy, name, onCancel, onConfirm }) {
             Cancel
           </button>
           <button
-            className="btn-primary !bg-rose-600 hover:!bg-rose-500"
+            className="btn-danger"
             onClick={onConfirm}
             disabled={busy}
           >
@@ -61,7 +62,7 @@ function ConfirmDeleteModal({ open, busy, name, onCancel, onConfirm }) {
   );
 }
 
-function CollectionCard({ collection, lastRun, onDelete, onRunAgain }) {
+function CollectionCard({ collection, lastRun, onDelete, onRunAgain, canDelete }) {
   const requests = collection.summary?.requestCount ?? 0;
   const folders = collection.summary?.folderCount ?? 0;
   const lastStatus = lastRun?.status;
@@ -87,21 +88,21 @@ function CollectionCard({ collection, lastRun, onDelete, onRunAgain }) {
       </div>
 
       {/* Counts */}
-      <div className="grid grid-cols-3 gap-2">
-        <div className="rounded-lg border border-slate-700 bg-slate-800 p-3">
-          <div className="text-[10px] uppercase tracking-wide text-slate-500">Requests</div>
-          <div className="mt-1 text-lg font-semibold text-slate-100">{requests}</div>
+      <div className="grid grid-cols-3 gap-2 min-w-0">
+        <div className="rounded-lg border border-soft bg-[#f9fafb] p-3">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500">Requests</div>
+          <div className="mt-1 font-num text-lg font-semibold text-ink-900">{requests}</div>
         </div>
-        <div className="rounded-lg border border-slate-700 bg-slate-800 p-3">
-          <div className="text-[10px] uppercase tracking-wide text-slate-500">Folders</div>
-          <div className="mt-1 text-lg font-semibold text-slate-100">{folders}</div>
+        <div className="rounded-lg border border-soft bg-[#f9fafb] p-3">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500">Folders</div>
+          <div className="mt-1 font-num text-lg font-semibold text-ink-900">{folders}</div>
         </div>
-        <div className="rounded-lg border border-slate-700 bg-slate-800 p-3">
-          <div className="text-[10px] uppercase tracking-wide text-slate-500">Last run</div>
-          <div className="mt-1 truncate text-sm font-semibold text-slate-100">
+        <div className="rounded-lg border border-soft bg-[#f9fafb] p-3">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500">Last run</div>
+          <div className="mt-1 truncate text-sm font-semibold text-ink-900">
             {lastRun ? relativeTime(lastRun.startedAt) : '—'}
           </div>
-          <div className="text-[10px] text-slate-500">
+          <div className="text-[10px] font-mono text-ink-500">
             {lastRun?.durationMs != null ? fmtDuration(lastRun.durationMs) : ''}
           </div>
         </div>
@@ -134,13 +135,15 @@ function CollectionCard({ collection, lastRun, onDelete, onRunAgain }) {
         >
           Reports
         </Link>
-        <button
-          type="button"
-          onClick={onDelete}
-          className="ml-auto rounded-md px-2 py-1.5 text-xs font-medium text-rose-300/80 hover:bg-rose-500/10 hover:text-rose-200"
-        >
-          Delete
-        </button>
+        {canDelete && (
+          <button
+            type="button"
+            onClick={onDelete}
+            className="ml-auto rounded-md px-2.5 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-50"
+          >
+            Delete
+          </button>
+        )}
       </div>
     </div>
   );
@@ -148,6 +151,8 @@ function CollectionCard({ collection, lastRun, onDelete, onRunAgain }) {
 
 export default function CollectionsPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [items, setItems] = useState([]);
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -283,9 +288,7 @@ export default function CollectionsPage() {
       </div>
 
       {error && (
-        <div className="rounded-md border border-rose-800 bg-rose-950/40 p-3 text-sm text-rose-300">
-          {error}
-        </div>
+        <div className="alert-error" role="alert">{error}</div>
       )}
 
       {loading && (
@@ -335,6 +338,7 @@ export default function CollectionsPage() {
               lastRun={latestByCollection.get(c.summary?.name || '')}
               onDelete={() => setPendingDelete(c)}
               onRunAgain={() => onRunAgain(c)}
+              canDelete={isAdmin}
             />
           ))}
         </div>

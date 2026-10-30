@@ -187,7 +187,7 @@ export default function GenerateScriptPage() {
     return <div className="card">Loading collection…</div>;
   }
   if (error && !collection) {
-    return <div className="card text-rose-300">Error: {error}</div>;
+    return <div className="card text-rose-700">Error: {error}</div>;
   }
   if (!collection) {
     return <div className="card">Collection not found.</div>;
@@ -240,7 +240,7 @@ export default function GenerateScriptPage() {
       <EnvironmentManager value={environmentId} onChange={setEnvironmentId} />
 
       {noEnvWarning && (
-        <div className="rounded-md border border-amber-700/50 bg-amber-500/10 p-3 text-sm text-amber-300">
+        <div className="rounded-md border border-amber-200 bg-amber-500/10 p-3 text-sm text-amber-700">
           <div className="font-semibold">No environment selected</div>
           <div className="mt-1 text-xs">
             The collection references {auth.unresolvedTokenVars.length} unresolved auth variable
@@ -257,7 +257,7 @@ export default function GenerateScriptPage() {
       />
 
       {tokenWarning && (
-        <div className="rounded-md border border-amber-700/50 bg-amber-500/10 p-3 text-sm text-amber-300">
+        <div className="rounded-md border border-amber-200 bg-amber-500/10 p-3 text-sm text-amber-700">
           {tokenWarning}
         </div>
       )}
@@ -279,7 +279,7 @@ export default function GenerateScriptPage() {
       />
 
       {error && (
-        <div className="rounded-md border border-rose-800 bg-rose-950/40 p-3 text-sm text-rose-300">
+        <div className="alert-error">
           {error}
         </div>
       )}
@@ -407,9 +407,9 @@ export default function GenerateScriptPage() {
           <div className="mt-3 text-sm">
             Status:{' '}
             {prepResult.ready ? (
-              <span className="text-emerald-300">Ready ✓</span>
+              <span className="text-emerald-700">Ready ✓</span>
             ) : (
-              <span className="text-amber-300">
+              <span className="text-amber-700">
                 Missing: {prepResult.missingEnvVars.join(', ')}
               </span>
             )}

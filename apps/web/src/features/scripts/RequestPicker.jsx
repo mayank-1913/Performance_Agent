@@ -2,13 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { collectionsApi } from '../../shared/api/collections.api.js';
 
 const METHOD_TONES = {
-  GET: 'bg-emerald-500/15 text-emerald-300',
-  POST: 'bg-sky-500/15 text-sky-300',
-  PUT: 'bg-amber-500/15 text-amber-300',
-  PATCH: 'bg-amber-500/15 text-amber-300',
-  DELETE: 'bg-rose-500/15 text-rose-300',
-  HEAD: 'bg-slate-500/15 text-slate-300',
-  OPTIONS: 'bg-slate-500/15 text-slate-300',
+  GET: 'bg-blue-50 text-blue-700 border border-blue-200',
+  POST: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+  PUT: 'bg-amber-50 text-amber-700 border border-amber-200',
+  PATCH: 'bg-violet-50 text-violet-700 border border-violet-200',
+  DELETE: 'bg-rose-50 text-rose-700 border border-rose-200',
+  HEAD: 'bg-gray-50 text-gray-700 border border-gray-200',
+  OPTIONS: 'bg-gray-50 text-gray-700 border border-gray-200',
 };
 
 const ALL_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
@@ -169,7 +169,7 @@ export default function RequestPicker({ collectionId, loadProfile, onSelectionCh
     return <div className="card text-sm text-slate-400">Loading collection tree…</div>;
   }
   if (error) {
-    return <div className="card text-sm text-rose-300">Error: {error}</div>;
+    return <div className="card text-sm text-rose-700">Error: {error}</div>;
   }
   if (!tree) return null;
 
@@ -268,7 +268,7 @@ export default function RequestPicker({ collectionId, loadProfile, onSelectionCh
                 className={[
                   'rounded px-2 py-1 text-xs font-mono transition-colors',
                   on
-                    ? METHOD_TONES[m] || 'bg-slate-500/15 text-slate-300'
+                    ? METHOD_TONES[m] || 'bg-gray-100 text-slate-300'
                     : 'bg-slate-800/60 text-slate-500 hover:text-slate-300',
                 ].join(' ')}
                 title={`Toggle ${m}`}
@@ -329,7 +329,7 @@ export default function RequestPicker({ collectionId, loadProfile, onSelectionCh
 
       {/* Estimate */}
       {estimate && selectedCount > 0 && (
-        <div className="mt-3 rounded-md border border-slate-800 bg-slate-900/40 p-3 text-xs text-slate-300">
+        <div className="mt-3 rounded-lg border border-soft bg-gray-50 p-3 text-xs text-slate-300">
           <div className="font-semibold text-slate-200">Estimated execution size</div>
           <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-1 md:grid-cols-4">
             <div>
@@ -425,7 +425,7 @@ function TreeNodes({
         const isVisible = filteredIndices.has(node.requestIndex);
         if (!isVisible) return null;
         const isSel = selected.has(node.requestIndex);
-        const tone = METHOD_TONES[node.method] || 'bg-slate-500/15 text-slate-300';
+        const tone = METHOD_TONES[node.method] || 'bg-gray-100 text-slate-300';
         return (
           <li key={node.id}>
             <label
@@ -450,7 +450,7 @@ function TreeNodes({
                 {node.name}
               </span>
               {node.hasAuth && (
-                <span className="ml-1 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] text-amber-300 shrink-0">
+                <span className="ml-1 rounded bg-amber-50 px-1.5 py-0.5 text-[10px] text-amber-700 shrink-0">
                   auth
                 </span>
               )}

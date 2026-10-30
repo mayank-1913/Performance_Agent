@@ -3,7 +3,7 @@
  * Colors mirror the reference image (Processing / Refund / Success chips).
  */
 const STYLES = {
-  queued:    'bg-slate-100 text-slate-600 border-slate-200',
+  queued:    'bg-gray-50 text-gray-700 border-gray-200',
   running:   'bg-sky-50 text-sky-700 border-sky-200 animate-pulse',
   completed: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   failed:    'bg-rose-50 text-rose-700 border-rose-200',
