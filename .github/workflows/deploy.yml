@@ -29,17 +29,42 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
         run: |
+          set -euo pipefail
           mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_deploy
+          chmod 700 ~/.ssh
+          # Write the key via `printf` so any trailing newline the secret
+          # carried is preserved and we can force one on if missing.
+          # OpenSSH refuses keys that don't end with a newline.
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_deploy
+          # Strip any Windows-style carriage returns that can sneak in when
+          # the secret was pasted from a Windows clipboard.
+          sed -i 's/\r$//' ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
-          ssh-keyscan -H "$VM_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          # Validate the key file before we ever try to use it. This fails
+          # loudly if the paste was wrong (wrong format, missing lines,
+          # extra blank lines) so the error message is actually useful.
+          ssh-keygen -y -f ~/.ssh/id_deploy > /dev/null
+          echo "deploy key format OK"
+          # Trust the VM's host key on first use. The VM ip is fixed.
+          ssh-keyscan -T 5 -H "$VM_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          if ! [ -s ~/.ssh/known_hosts ]; then
+            echo "warning: ssh-keyscan produced nothing, will use accept-new"
+          fi
 
       - name: Deploy
         id: deploy
         run: |
-          ssh -o IdentitiesOnly=yes -i ~/.ssh/id_deploy "$VM_USER@$VM_HOST" \
-            "bash $APP_DIR/deploy/deploy.sh"
+          set -euo pipefail
+          ssh -o BatchMode=yes \
+              -o IdentitiesOnly=yes \
+              -o StrictHostKeyChecking=accept-new \
+              -o ConnectTimeout=10 \
+              -i ~/.ssh/id_deploy \
+              "$VM_USER@$VM_HOST" \
+              "bash $APP_DIR/deploy/deploy.sh"
 
       - name: Health check
         run: |
