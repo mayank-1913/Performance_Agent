@@ -1,0 +1,54 @@
+name: performance-agent
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    image: performance-agent-api:local
+    container_name: pa-api
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      K6_BIN: k6
+      DB_PATH: /app/apps/api/storage/database.sqlite
+      UPLOAD_DIR: /app/apps/api/storage/uploads
+      CORS_ORIGINS: ${PUBLIC_ORIGIN:-http://localhost:8080}
+    volumes:
+      - api-storage:/app/apps/api/storage
+      - api-logs:/app/apps/api/logs
+    expose:
+      - "4000"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_BASE_PATH: ${VITE_BASE_PATH:-/perf-agent/}
+    image: performance-agent-web:local
+    container_name: pa-web
+    # No host-published port -- TLS termination moved to deploy-gateway's own nginx, the one shared front door
+    # for every tool on this VM (one cert, reused across every port/tool). Plain HTTP internally; deploy-gateway
+    # reverse-proxies to this container by name on the shared "gateway" network, mounted at /perf-agent (moved
+    # off its own :6367 port -- see deploy-gateway's own nginx.conf/README).
+    networks:
+      - default   # still needs this to reach `api` by name, unchanged
+      - gateway
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  api-storage:
+  api-logs:
+
+networks:
+  default: {}
+  gateway:
+    name: gateway
+    external: true

@@ -8,12 +8,20 @@
  *   PER_VU_LOGIN   — each VU logs in independently with isolated tokens/state
  *   SHARED_SESSION — one login in setup(), token shared across all VUs
  *   MANUAL_TOKEN   — user-supplied token only; no automatic login
+ *   NONE           — collection has no authentication; no login, no
+ *                    Authorization injection, no auth artifacts of any kind
+ *
+ * NONE is never inferred automatically — the user must explicitly pick it.
+ * A collection that genuinely has no auth will stay on the existing default
+ * (MANUAL_TOKEN) unless the user opts into NONE. This preserves backward
+ * compatibility with every pre-existing script, manifest, and workflow.
  */
 
 const AUTH_SESSION_MODES = Object.freeze({
   PER_VU_LOGIN: 'PER_VU_LOGIN',
   SHARED_SESSION: 'SHARED_SESSION',
   MANUAL_TOKEN: 'MANUAL_TOKEN',
+  NONE: 'NONE',
 });
 
 const MODE_LIST = Object.freeze(Object.values(AUTH_SESSION_MODES));

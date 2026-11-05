@@ -212,6 +212,15 @@ async function generate(req, res, next) {
       authFlow = { ...authFlow, enabled: false };
       injectAuthToken = true;
     }
+    // NONE explicitly disables every automatic auth mechanism: no login
+    // request in setup(), no Authorization header injection, no token
+    // backfill. The collection's existing headers (if any) are left alone
+    // so a user who deliberately kept a header will still send it; but we
+    // never SYNTHESIZE an Authorization header in this mode.
+    if (workload.authSessionMode === 'NONE') {
+      authFlow = { ...authFlow, enabled: false };
+      injectAuthToken = false;
+    }
     // The legacy validator runs against the resolved loadProfile — this
     // preserves the historical 400 errors on obviously broken payloads
     // even when the caller went through the new `workload` field.
@@ -233,6 +242,7 @@ async function generate(req, res, next) {
       authFlow,
       authSessionMode: workload.authSessionMode,
       credentialReuse: workload.credentialReuse,
+      dynamicVariables: workload.dynamicVariables,
       executionModel,
     });
 
@@ -250,6 +260,13 @@ async function generate(req, res, next) {
       (collectRuntimeCapturedVarNames(parsed) || []).map((name) => toEnvName(name))
     );
 
+    // Variables configured for per-VU dynamic generation are produced at
+    // K6 runtime; they must NOT appear in the pre-flight required-env
+    // check or the run would be falsely blocked with MISSING_ENV_VARS.
+    const perVuDynamicEnvNames = new Set(
+      (workload.dynamicVariables?.variables || []).map((v) => toEnvName(v.name))
+    );
+
     const expectedEnvVars = Array.from(
       new Set([
         ...parsed.referencedVars.map(toEnvName),
@@ -260,6 +277,7 @@ async function generate(req, res, next) {
       if (runtimeCapturedNames.has(envName)) return false;
       if (variableResolution?.sources?.[envName]) return false;
       if (envName === 'AUTH_TOKEN' && authFlow.enabled) return false;
+      if (perVuDynamicEnvNames.has(envName)) return false;
       return true;
     });
 

@@ -46,6 +46,12 @@ const {
 } = require('./perVuAuthCodegen');
 const { buildTimeoutCodegen, DEFAULT_REQUEST_TIMEOUT } = require('./requestTimeout');
 const { isDynamicVariable, DYNAMIC_VARIABLE_RUNTIME_JS } = require('../postman/dynamicVariables');
+const {
+  normalizeDynamicVariables: normalizePerVuDynamicVariables,
+  isEnabled: isPerVuDynamicEnabled,
+  placeholderNames: perVuDynamicPlaceholderNames,
+  buildPerVuDynamicRuntimeJs,
+} = require('./perVuDynamicVars');
 const { normalizeRequestVariables, REQUEST_LOCAL_RUNTIME_JS } = require('../postman/requestLocals');
 const { isJsonRawBody, buildJsonAwareRawBody } = require('../postman/jsonBodyCodegen');
 const { analyzePrerequestScript, emitPrerequestBlock, PREREQUEST_RUNTIME_JS } = require('../postman/prerequestCodegen');
@@ -199,6 +205,7 @@ function makeInterpolator({
   prerequestSets = null,
   prerequestLocalSets = null,
   useCompiledVars = false,
+  perVuDynamicNames = null,
 }) {
   const reroute = tokenReroute || new Set();
   const captured = capturedVarNames || new Set();
@@ -207,6 +214,15 @@ function makeInterpolator({
   const pmSets = prerequestSets || new Set();
   const pmLocalSets = prerequestLocalSets || new Set();
   const reqIdx = requestIndex;
+  // Set of Postman placeholder names configured for per-VU dynamic
+  // generation. When a name is in this set, the interpolator short-circuits
+  // ALL normal resolution and emits `__getPerVuVar(name)` so the per-VU
+  // value shadows any static env / collection / runtime value with the
+  // same name.
+  const perVuDynamic =
+    perVuDynamicNames instanceof Set
+      ? perVuDynamicNames
+      : new Set(Array.isArray(perVuDynamicNames) ? perVuDynamicNames : []);
   const compiledVarCall = (original) =>
     '__getCompiledVar(' + JSON.stringify(original) + (reqIdx >= 0 ? `, __dynCache_${reqIdx}` : ', {}') + ')';
 
@@ -268,6 +284,13 @@ function makeInterpolator({
   }
 
   function expr(envName, originalName) {
+    // Per-VU dynamic test data — highest priority when configured for this
+    // placeholder. Short-circuits token / env / captured / compiled-var
+    // lookups so a static env value with the same name cannot leak into
+    // the request.
+    if (perVuDynamic.has(originalName)) {
+      return '${__getPerVuVar(' + JSON.stringify(originalName) + ')}';
+    }
     if (perVuCredentials && /^LOGIN_/.test(envName)) {
       return '${(__resolveLoginField("' + envName + '") || ' + "''" + ')}';
     }
@@ -621,6 +644,10 @@ function deriveAuthStrategy({
   collectionHasAuthHeader,
   authSessionMode,
 }) {
+  // Explicit user opt-out beats every heuristic. NONE skips login, skips
+  // Authorization injection, and tells the resolver to leave existing
+  // collection headers alone.
+  if (authSessionMode === 'NONE') return AuthStrategy.NONE;
   if (authSessionMode === 'MANUAL_TOKEN') return AuthStrategy.STATIC;
   if (authSessionMode === 'PER_VU_LOGIN' && runtimeEnabled) return AuthStrategy.PER_VU_LOGIN;
   if (runtimeEnabled || authSessionMode === 'SHARED_SESSION') return AuthStrategy.SETUP_LOGIN;
@@ -1646,12 +1673,23 @@ function generateK6Script(parsed, options = {}) {
       .filter(Boolean)
   );
 
+  // Independent per-VU dynamic test data. Backward compatible: DISABLED by
+  // default. When enabled, the listed placeholder names are intercepted by
+  // the interpolator BEFORE token/env/compiled-var resolution so a static
+  // environment value with the same name cannot leak through.
+  const dynamicVariablesConfig = normalizePerVuDynamicVariables(
+    options.dynamicVariables || workload.dynamicVariables
+  );
+  const perVuDynamicEnabled = isPerVuDynamicEnabled(dynamicVariablesConfig);
+  const perVuDynamicNames = new Set(perVuDynamicPlaceholderNames(dynamicVariablesConfig));
+
   const interp = makeInterpolator({
     tokenReroute,
     runtimeEnabled,
     capturedVarNames,
     stateRef,
     useCompiledVars,
+    perVuDynamicNames,
   });
   const credentialInterp = makeInterpolator({
     tokenReroute,
@@ -1659,6 +1697,7 @@ function generateK6Script(parsed, options = {}) {
     capturedVarNames,
     perVuCredentials: true,
     useCompiledVars,
+    perVuDynamicNames,
   });
 
   const vars = collectVarSet(parsed);
@@ -1935,7 +1974,8 @@ function generateK6Script(parsed, options = {}) {
     DYNAMIC_VARIABLE_RUNTIME_JS,
     REQUEST_LOCAL_RUNTIME_JS,
     PREREQUEST_RUNTIME_JS,
-  ].join('\n\n');
+    perVuDynamicEnabled ? buildPerVuDynamicRuntimeJs(dynamicVariablesConfig) : '',
+  ].filter(Boolean).join('\n\n');
 
   // ── Section 10: Request Groups ──────────────────────────────────────────
   const injectSet = new Set(authFlow.injectionTargets || []);
@@ -1980,6 +2020,7 @@ function generateK6Script(parsed, options = {}) {
         prerequestSets,
         prerequestLocalSets,
         useCompiledVars,
+        perVuDynamicNames,
       });
       const prerequestEmitted = emitPrerequestBlock(emitIndex, prerequestAnalysis, localSeed);
       const modelReq = executionModel?.requests?.[i];

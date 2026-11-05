@@ -302,6 +302,10 @@ function normalizeWorkload(input, context = {}) {
       injectAuthToken: !!context.injectAuthToken,
     }
   );
+  // Independent per-VU dynamic test-data config. Default DISABLED so
+  // every pre-existing workload keeps its exact pre-change behaviour.
+  const { normalizeDynamicVariables } = require('./perVuDynamicVars');
+  const dynamicVariables = normalizeDynamicVariables(src.dynamicVariables);
 
   return {
     profile,
@@ -330,6 +334,7 @@ function normalizeWorkload(input, context = {}) {
       resolved.rampDown === PROFILE_DEFAULTS.custom.rampDown,
     authSessionMode: authSession.authSessionMode,
     credentialReuse: authSession.credentialReuse,
+    dynamicVariables,
   };
 }
 
@@ -353,6 +358,14 @@ function publicWorkload(workload) {
     totalDurationMs: workload.totalDurationMs,
     authSessionMode: workload.authSessionMode || null,
     credentialReuse: !!workload.credentialReuse,
+    dynamicVariables: workload.dynamicVariables
+      ? {
+          mode: workload.dynamicVariables.mode || 'DISABLED',
+          variables: Array.isArray(workload.dynamicVariables.variables)
+            ? workload.dynamicVariables.variables.map((v) => ({ ...v }))
+            : [],
+        }
+      : { mode: 'DISABLED', variables: [] },
   };
 }
 

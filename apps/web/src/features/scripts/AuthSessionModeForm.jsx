@@ -14,6 +14,12 @@ const MODES = [
     label: 'Manual token',
     hint: 'Use the manually supplied token only — no automatic login.',
   },
+  {
+    id: 'NONE',
+    label: 'No authentication',
+    hint:
+      'The collection does not require authentication. No login request, no Authorization header injection. Existing collection headers are left untouched.',
+  },
 ];
 
 /**
@@ -47,7 +53,10 @@ export default function AuthSessionModeForm({
       <div className="mt-3 flex flex-wrap gap-2">
         {MODES.map((m) => {
           const active = m.id === mode;
-          const disabled = m.id !== 'MANUAL_TOKEN' && !loginDetected;
+          // MANUAL_TOKEN and NONE are always available — they do not
+          // depend on a detected login request in the collection.
+          const disabled =
+            m.id !== 'MANUAL_TOKEN' && m.id !== 'NONE' && !loginDetected;
           return (
             <button
               key={m.id}

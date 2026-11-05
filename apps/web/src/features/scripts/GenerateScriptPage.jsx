@@ -7,6 +7,7 @@ import AuthStatusBadge from './AuthStatusBadge.jsx';
 import ManualTokenField from './ManualTokenField.jsx';
 import LoadProfileForm from './LoadProfileForm.jsx';
 import AuthSessionModeForm from './AuthSessionModeForm.jsx';
+import DynamicTestDataForm from './DynamicTestDataForm.jsx';
 import EnvironmentManager from './EnvironmentManager.jsx';
 import RequestPicker from './RequestPicker.jsx';
 import { PanelLoader } from '../../shared/components/Loading.jsx';
@@ -33,6 +34,12 @@ export default function GenerateScriptPage() {
     authSessionMode: null,
     credentialReuse: false,
     credentialDataset: '',
+  });
+  // Independent per-VU dynamic test-data config. Default DISABLED keeps
+  // every existing collection's behavior byte-for-byte identical.
+  const [dynamicVariables, setDynamicVariables] = useState({
+    mode: 'DISABLED',
+    variables: [],
   });
   const [manualToken, setManualToken] = useState('');
 
@@ -138,6 +145,10 @@ export default function GenerateScriptPage() {
               profile: profile.profile || 'custom',
               authSessionMode: authSession.authSessionMode || undefined,
               credentialReuse: authSession.credentialReuse || undefined,
+              dynamicVariables:
+                dynamicVariables && dynamicVariables.mode === 'PER_VU'
+                  ? dynamicVariables
+                  : undefined,
               overrides: {
                 vus: profile.vus,
                 rampUp: profile.rampUp,
@@ -145,10 +156,13 @@ export default function GenerateScriptPage() {
                 rampDown: profile.rampDown,
               },
             },
+            // NONE mode explicitly opts out of Authorization injection; every
+            // other mode keeps the existing auto/manual logic.
             injectAuthToken:
-              authSession.authSessionMode === 'MANUAL_TOKEN' ||
-              auth?.mode === 'MANUAL_REQUIRED' ||
-              manualToken.trim().length > 0,
+              authSession.authSessionMode !== 'NONE' &&
+              (authSession.authSessionMode === 'MANUAL_TOKEN' ||
+                auth?.mode === 'MANUAL_REQUIRED' ||
+                manualToken.trim().length > 0),
           },
         });
         setScript(data);
@@ -160,7 +174,7 @@ export default function GenerateScriptPage() {
         setGenerating(false);
       }
     },
-    [collectionId, environmentId, profile, authSession, auth, manualToken, selection]
+    [collectionId, environmentId, profile, authSession, dynamicVariables, auth, manualToken, selection]
   );
 
   const onPrepareRun = async () => {
@@ -263,6 +277,14 @@ export default function GenerateScriptPage() {
       )}
 
       <LoadProfileForm value={profile} onChange={setProfile} />
+
+      <DynamicTestDataForm
+        value={dynamicVariables}
+        onChange={setDynamicVariables}
+        suggestedNames={
+          (collection?.summary?.referencedVars || script?.referencedVars || []) || []
+        }
+      />
 
       <AuthSessionModeForm
         authSessionMode={authSession.authSessionMode}
