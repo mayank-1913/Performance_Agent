@@ -1,0 +1,64 @@
+name: Deploy to VM
+
+# Triggers:
+#   - automatic on every push to `main`
+#   - manual via "Run workflow" button (useful for rollbacks or forced redeploys)
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  # Serialize deploys so two overlapping pushes don't race on the VM.
+  group: deploy-vm
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build + swap containers on VM
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      VM_HOST: 65.0.168.138
+      VM_USER: ubuntu
+      APP_DIR: /home/ubuntu/performance-agent
+
+    steps:
+      - name: Checkout (for commit metadata only)
+        uses: actions/checkout@v4
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -H "$VM_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Deploy
+        id: deploy
+        run: |
+          ssh -o IdentitiesOnly=yes -i ~/.ssh/id_deploy "$VM_USER@$VM_HOST" \
+            "bash $APP_DIR/deploy/deploy.sh"
+
+      - name: Health check
+        run: |
+          # The VM itself can reach the gateway at https://localhost; we probe
+          # externally to make sure the public URL responds too.
+          set +e
+          FRONT=$(curl -sk -m 10 -o /dev/null -w "%{http_code}" https://qa.mtraction.com/perf-agent/)
+          API=$(curl -sk -m 10 -o /dev/null -w "%{http_code}" https://qa.mtraction.com/perf-agent/api/v1/health)
+          echo "front: $FRONT"
+          echo "api:   $API"
+          if [ "$FRONT" != "200" ] || [ "$API" != "200" ]; then
+            echo "::error ::Deploy succeeded but post-deploy health check failed (front=$FRONT api=$API)."
+            exit 1
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Deploy ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- commit: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- url: https://qa.mtraction.com/perf-agent/" >> $GITHUB_STEP_SUMMARY
